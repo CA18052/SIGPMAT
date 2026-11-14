@@ -4,38 +4,27 @@ El código está preparado para un servicio web de Render y una base PostgreSQL 
 
 Trabajaremos con **datos ficticios**. La base del Mac seguirá siendo independiente y no se modificará.
 
-## 1. Crear el proyecto en Neon
+## 1. Base de datos Neon
 
-1. Entrar en https://console.neon.tech/ e iniciar sesión. Elegir el plan **Free**.
-2. Crear un proyecto llamado `sigpmat-demo`, con base de datos `neondb`. Elegir PostgreSQL 18 cuando esté disponible.
-3. En **Roles**, crear un nuevo rol PostgreSQL llamado exactamente `sigpmat_app`. Guardar su contraseña fuera de GitHub.
-4. Abrir el panel **Connect** y obtener dos cadenas de conexión **directas (no pooled)** a la base `neondb`: una del propietario del proyecto y otra de `sigpmat_app`. No copiarlas en el chat.
+La base de demostración **ya está instalada** en el proyecto `sigpmat-demo` de Neon, con base `neondb`. Se verificaron las 24 tablas, 176 columnas, 42 claves foráneas, seis triggers, tres roles y los datos ficticios (cuatro departamentos y 16 empleados).
 
-### Instalar la base desde el Mac
+**No vuelvas a ejecutar las migraciones ni `scripts/configurar_neon_mac.sh` sobre este proyecto**, porque la base ya contiene la estructura.
 
-PostgreSQL 18 ya está instalado con Homebrew en nuestro entorno de desarrollo. Desde una Terminal:
+### Crear las dos cuentas de acceso
+
+1. Abre la [consola de Neon](https://console.neon.tech/) y selecciona el proyecto `sigpmat-demo`.
+2. En **Connect**, elige la base `neondb`, el rol **`sigpmat_app`**, y desactiva la conexión **pooled** para copiar la URL directa. No envíes esa URL por chat ni la guardes en GitHub.
+3. En tu Mac, ejecuta:
 
 ```bash
 cd "$HOME/Documents/SIGPMAT/GitHub_publicacion"
 git pull --ff-only origin main
-cd backend
-npm ci
-cd ..
-bash scripts/configurar_neon_mac.sh
+cd backend && npm ci && cd ..
+bash scripts/crear_cuentas_neon_mac.sh
 ```
 
-El script solicitará ambas conexiones sin mostrarlas, comprobará que pertenecen a Neon y ejecutará las migraciones en orden:
-
-- Creación de las 24 tablas y relaciones.
-- Permisos de `sigpmat_app`.
-- Roles funcionales de SIGPMAT.
-- Disparadores de integridad de los turnos.
-- Departamentos, cargos, especialidades y empleados de ensayo.
-- Creación de `admin.demo` y `jefe.demo` con contraseñas que introducirás tú mismo.
-
-**Importante:** el script solo debe ejecutarse una vez sobre un proyecto Neon nuevo. Si se interrumpe, no volver a ejecutarlo sin revisar el estado de las tablas. No subas a GitHub ni compartas las conexiones.
-
-Para pruebas de desarrollo se utiliza el usuario limitado `sigpmat_app`. La conexión del propietario se usa únicamente durante las migraciones.
+4. Pega la conexión cuando se solicite; el texto permanecerá oculto. El script te pedirá dos contraseñas diferentes, de al menos 12 caracteres, para `admin.demo` y `jefe.demo`. Guárdalas en tu gestor de contraseñas.
+5. No repitas el script cuando termine: las cuentas ya existirán.
 
 ## 2. Crear la aplicación en Render
 
@@ -70,6 +59,15 @@ Crear un **Web Service** manualmente vinculado a `CA18052/SIGPMAT`, rama `main`:
 | Health Check Path | `/api/health` |
 
 Establecer además `NODE_ENV=production`, `NODE_VERSION=24`, `DATABASE_URL` y `JWT_SECRET`. Render proporciona `PORT` y la aplicación se enlaza a `0.0.0.0`.
+
+
+### Servicio existente de Render
+
+El servicio gratuito `sigpmat-demo` **ya fue creado** en Render: https://dashboard.render.com/web/srv-dbsdbnjbc2fs73b8ouqg. No crees otro servicio ni vuelvas a importar el Blueprint.
+
+Abre **Environment** en ese servicio y añade las variables privadas `DATABASE_URL` (URL del rol `sigpmat_app`, base `neondb`, de Neon) y `JWT_SECRET` (valor hexadecimal de 96 caracteres generado localmente con el comando descrito arriba). Usa **Save, rebuild and deploy**, o la opción equivalente para aplicar los cambios. No las compartas por chat.
+
+La dirección pública asignada es https://sigpmat-demo.onrender.com. Debe validarse tras configurar las variables: que exista una dirección no demuestra que la API ya funcione.
 
 ## 3. Qué ocurre con los datos
 
