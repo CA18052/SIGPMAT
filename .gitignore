@@ -1,4 +1,4 @@
-# Credenciales, datos privados y compilaciones
+# Nunca versionar secretos, respaldos ni datos personales
 **/.env
 **/.env.*
 !**/.env.example
