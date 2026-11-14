@@ -7,6 +7,7 @@ import { registrarRutasAutenticacion } from './auth/routes.js';
 import { registrarRutasDepartamentos } from './departamentos/routes.js';
 import { registrarRutasEmpleados } from './empleados/routes.js';
 import { registrarRutasPersonalV05 } from './personal/routes.js';
+import { registrarRutasTurnos } from './turnos/routes.js';
 
 const jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret || !/^[0-9a-f]{96}$/.test(jwtSecret)) {
@@ -22,7 +23,7 @@ await app.register(jwt, {
 await app.register(rateLimit, { global: false });
 
 app.get('/api/health', async () => ({
-  status: 'ok', service: 'SIGPMAT API', version: '0.5.0'
+  status: 'ok', service: 'SIGPMAT API', version: '0.6.0'
 }));
 
 app.get('/api/health/db', async (request, reply) => {
@@ -52,6 +53,7 @@ registrarRutasAutenticacion(app);
 registrarRutasDepartamentos(app);
 registrarRutasEmpleados(app);
 registrarRutasPersonalV05(app);
+registrarRutasTurnos(app);
 app.addHook('onClose', async () => { await pool.end(); });
 
 try {
