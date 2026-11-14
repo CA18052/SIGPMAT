@@ -103,9 +103,10 @@ export default function Turnos({
     turnos.filter(t => !filtroArea || t.id_departamento === filtroArea),
     [turnos, filtroArea]
   );
-  const programados = listados.filter(t => t.estado === 'abierto').length;
-  const cupos = listados.reduce((n, t) => n + t.cupos_requeridos, 0);
-  const cubiertos = listados.reduce((n, t) => n + t.cupos_ocupados, 0);
+  const abiertos = listados.filter(t => t.estado === 'abierto');
+  const programados = abiertos.length;
+  const cupos = abiertos.reduce((n, t) => n + t.cupos_requeridos, 0);
+  const cubiertos = abiertos.reduce((n, t) => n + t.cupos_ocupados, 0);
 
   async function abrirTurno(id: string) {
     setError(''); setMensaje(''); setProcesando(true);
