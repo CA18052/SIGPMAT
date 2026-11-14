@@ -15,6 +15,7 @@ BEGIN
     ('Enfermería (demostración)', 'enfermeria'),
     ('Médico especialista (demostración)', 'medico')
   ) AS c(nombre,categoria)
+  WHERE TRUE
   ON CONFLICT (nombre) DO NOTHING;
 
   INSERT INTO sigpmat.departamentos(codigo,nombre,ubicacion,activo)
@@ -24,6 +25,7 @@ BEGIN
     ('DEMO-PED', 'Pediatría', 'Edificio B, nivel 1'),
     ('DEMO-CIR', 'Cirugía General', 'Edificio A, nivel 3')
   ) AS d(codigo,nombre,ubicacion)
+  WHERE TRUE
   ON CONFLICT (codigo) DO NOTHING;
 
   INSERT INTO sigpmat.especialidades(codigo,nombre,activo,descripcion)
@@ -33,6 +35,7 @@ BEGIN
     ('DEMO-ESP-PED', 'Pediatría (demostración)'),
     ('DEMO-ESP-CIR', 'Cirugía general (demostración)')
   ) AS s(codigo,nombre)
+  WHERE TRUE
   ON CONFLICT (codigo) DO NOTHING;
 
   -- Evitar reutilizar un codigo de demo si ya existe con otro nombre.
@@ -83,6 +86,7 @@ BEGIN
     ('DEMO-CIR-04', 'Tomás', 'Pineda', 'Enfermería (demostración)', 'DEMO-CIR')
   ) AS p(codigo,nombres,apellidos,cargo,departamento)
   JOIN sigpmat.cargos c ON c.nombre=p.cargo AND c.activo=TRUE
+  WHERE TRUE
   ON CONFLICT (codigo_empleado) DO NOTHING;
 
   -- Los vinculos actuales o futuros de empleados existentes se respetan.
