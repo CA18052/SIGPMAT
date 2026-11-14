@@ -10,6 +10,7 @@ Esta carpeta contiene el frontend hecho con React, TypeScript y Vite. Se conecta
 - Consultar el detalle de un empleado y sus especialidades.
 - Consultar el personal adscrito a un departamento.
 - Modificar nombres y apellidos si la cuenta tiene el rol `ADMIN_GENERAL`.
+- Crear y consultar turnos, ver la cobertura, asignar personal y cancelar asignaciones o turnos.
 
 El panel muestra datos que devuelve la API. Por ahora, las cifras corresponden a los empleados visibles en la consulta, que tiene un límite de 100 registros. Todavía no hemos incorporado las pantallas para crear turnos ni asignar personal a ellos.
 
@@ -46,4 +47,4 @@ npm run build
 
 La sesión se mantiene en memoria: al actualizar la página hay que iniciar sesión otra vez. Los permisos se validan en la API; ocultar una opción del menú no reemplaza esos controles. Si el backend está apagado, el frontend no podrá cargar los datos.
 
-Esta versión es parte del proyecto académico. Falta terminar la gestión de turnos y realizar las pruebas completas de la interfaz.
+Esta versión es parte del proyecto académico. Falta comprobar los nuevos flujos de turnos en la base local y completar la asignación automática y las pruebas de la interfaz.
