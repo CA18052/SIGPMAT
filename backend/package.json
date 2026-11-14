@@ -13,7 +13,8 @@
     "smoke:auth": "tsx src/scripts/smoke-auth.ts",
     "smoke:departamentos": "tsx src/scripts/smoke-departamentos.ts",
     "smoke:empleados": "tsx src/scripts/smoke-empleados.ts",
-    "smoke:personal:v05": "tsx src/scripts/smoke-personal-v05.ts"
+    "smoke:personal:v05": "tsx src/scripts/smoke-personal-v05.ts",
+    "smoke:turnos": "tsx src/scripts/smoke-turnos.ts"
   },
   "keywords": [],
   "author": "",
