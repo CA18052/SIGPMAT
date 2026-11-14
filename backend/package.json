@@ -14,7 +14,8 @@
     "smoke:departamentos": "tsx src/scripts/smoke-departamentos.ts",
     "smoke:empleados": "tsx src/scripts/smoke-empleados.ts",
     "smoke:personal:v05": "tsx src/scripts/smoke-personal-v05.ts",
-    "smoke:turnos": "tsx src/scripts/smoke-turnos.ts"
+    "smoke:turnos": "tsx src/scripts/smoke-turnos.ts",
+    "bootstrap:neon": "tsx src/scripts/bootstrap-demo-neon.ts"
   },
   "keywords": [],
   "author": "",
