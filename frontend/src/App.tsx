@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
 import Turnos from './Turnos';
+import NuevoEmpleado from './NuevoEmpleado';
 import {
   ApiError, iniciarSesion, requestApi
 } from './api';
@@ -99,6 +100,8 @@ export default function App() {
   const [nombres, setNombres] = useState('');
   const [apellidos, setApellidos] = useState('');
   const [guardando, setGuardando] = useState(false);
+  const [mostrarNuevoEmpleado, setMostrarNuevoEmpleado] = useState(false);
+  const [mensajeEmpleado, setMensajeEmpleado] = useState('');
 
   const esAdmin = sesion?.usuario.roles.includes('ADMIN_GENERAL') ?? false;
   const esJefe = sesion?.usuario.roles.includes('JEFE_AREA') ?? false;
@@ -189,6 +192,7 @@ export default function App() {
 
   function cerrarSesion() {
     setSesion(null); setDetalle(null); setDetalleArea(null);
+    setMostrarNuevoEmpleado(false); setMensajeEmpleado('');
     setDepartamentos([]); setEmpleados([]); setPagina('resumen'); setFiltro(''); setBusqueda('');
   }
 
@@ -263,8 +267,8 @@ export default function App() {
             </>
           ) : pagina === 'empleados' ? (
             <section className="panel">
-              <div className="panel-heading wrap-heading"><div><div className="eyebrow">DIRECTORIO</div><h2>Empleados autorizados</h2><p>{listado.length} resultados visibles {cargando ? '· Actualizando…' : ''}</p></div>
-                <div className="filters"><input aria-label="Buscar empleados" value={busqueda} placeholder="Buscar nombre, código o cargo…" onChange={e => setBusqueda(e.target.value)}/><select aria-label="Filtrar por departamento" value={filtro} onChange={e => setFiltro(e.target.value)}><option value="">Todos los departamentos permitidos</option>{departamentos.map(d => <option key={d.id_departamento} value={d.id_departamento}>{d.nombre}</option>)}</select></div>
+              <div className="panel-heading wrap-heading"><div><div className="eyebrow">DIRECTORIO</div><h2>Empleados autorizados</h2><p>{listado.length} resultados visibles {cargando ? '· Actualizando…' : ''}</p>{mensajeEmpleado && <p role="status" className="employee-success">{mensajeEmpleado}</p>}</div>
+                <div className="filters">{esAdmin && <button type="button" className="button primary small" onClick={() => { setMensajeEmpleado(''); setMostrarNuevoEmpleado(true); }}>+ Registrar empleado</button>}<input aria-label="Buscar empleados" value={busqueda} placeholder="Buscar nombre, código o cargo…" onChange={e => setBusqueda(e.target.value)}/><select aria-label="Filtrar por departamento" value={filtro} onChange={e => setFiltro(e.target.value)}><option value="">Todos los departamentos permitidos</option>{departamentos.map(d => <option key={d.id_departamento} value={d.id_departamento}>{d.nombre}</option>)}</select></div>
               </div>
               <div className="table-wrap"><table><thead><tr><th>Código</th><th>Nombre completo</th><th>Cargo</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
                 {listado.map(e => <tr key={e.id_empleado}><td className="mono">{e.codigo_empleado}</td><td><strong>{e.nombres} {e.apellidos}</strong></td><td>{e.cargo}</td><td><Estado estado={e.estado_vinculo}/></td><td><button type="button" className="text-button" onClick={() => abrirEmpleado(e.id_empleado)}>Ver detalle →</button></td></tr>)}
@@ -280,9 +284,11 @@ export default function App() {
               {departamentos.length === 0 && <div className="empty">No hay departamentos disponibles para este usuario.</div>}
             </div>
           )}
-          <footer className="footer">SIGPMAT · Universidad de El Salvador · Proyecto académico 2026 <span>v0.2 — Interfaz web</span></footer>
+          <footer className="footer">SIGPMAT · Universidad de El Salvador · Proyecto académico 2026 <span>v0.3 — Interfaz web</span></footer>
         </div>
       </main>
+
+      {esAdmin && mostrarNuevoEmpleado && <NuevoEmpleado token={token} departamentos={departamentos} onCerrar={() => setMostrarNuevoEmpleado(false)} onSesionExpirada={cerrarSesion} onGuardado={(codigo) => { setMostrarNuevoEmpleado(false); setFiltro(''); setBusqueda(''); setVersion(v => v + 1); setMensajeEmpleado('Empleado ' + codigo + ' registrado correctamente.'); }} />}
 
       {(detalle || detalleArea) && <div className="overlay" role="presentation" onMouseDown={e => { if (e.currentTarget === e.target) {setDetalle(null);setDetalleArea(null);} }}>
         <section role="dialog" aria-modal="true" aria-label={detalle ? 'Detalle del empleado' : 'Detalle del departamento'} className="drawer">
