@@ -1,34 +1,31 @@
-# SIGPMAT — Interfaz web v0.1
+# Interfaz web de SIGPMAT
 
-Aplicación React + TypeScript + Vite conectada a la API Fastify de SIGPMAT.
+Esta carpeta contiene el frontend hecho con React, TypeScript y Vite. Se conecta con la API de Fastify para consultar y actualizar información de la base de datos.
 
-## Funciones disponibles
+## Qué se puede probar
 
-- Inicio de sesión con las credenciales creadas en PostgreSQL.
-- Panel con métricas de departamentos y empleados visibles.
-- Búsqueda y filtrado de empleados por departamento.
-- Vista de detalle del empleado y especialidades acreditadas.
-- Listado de departamentos y personal adscrito.
-- Edición de nombres y apellidos para ADMIN_GENERAL.
-- Restricción de navegación y operaciones basada en las respuestas HTTP del backend.
+- Iniciar sesión con una cuenta creada en la base de datos.
+- Ver los empleados y departamentos disponibles para el usuario.
+- Buscar empleados y filtrarlos por departamento.
+- Consultar el detalle de un empleado y sus especialidades.
+- Consultar el personal adscrito a un departamento.
+- Modificar nombres y apellidos si la cuenta tiene el rol `ADMIN_GENERAL`.
 
-**Importante:** no se muestran cifras ficticias en el dashboard; los datos vienen de las rutas reales de la API. Los módulos visuales de turnos y asignaciones aún no están implementados.
+El panel muestra datos que devuelve la API. Por ahora, las cifras corresponden a los empleados visibles en la consulta, que tiene un límite de 100 registros. Todavía no hemos incorporado las pantallas para crear turnos ni asignar personal a ellos.
 
-## Requisitos
+## Cómo iniciarlo
 
-Node.js 24 LTS, npm y el backend Fastify v0.5 en ejecución sobre http://127.0.0.1:3001.
+Primero hay que tener PostgreSQL en funcionamiento y el backend encendido en el puerto 3001.
 
-## Ejecución local
-
-Desde la raíz del repositorio:
+En una Terminal:
 
 ```bash
 cd backend
-npm install
+npm ci
 npm run dev
 ```
 
-Abre otra Terminal:
+En otra:
 
 ```bash
 cd frontend
@@ -36,22 +33,17 @@ npm install
 npm run dev
 ```
 
-Accede a **http://127.0.0.1:5173**. Vite redirige todas las solicitudes `/api` a Fastify en el puerto 3001.
+Abre `http://127.0.0.1:5173` e inicia sesión con una cuenta de desarrollo, por ejemplo `admin.dev`. La contraseña depende de la instalación local; no se guarda en este repositorio.
 
-Utiliza una cuenta de desarrollo previamente creada, por ejemplo `admin.dev`. Las contraseñas no deben añadirse al repositorio.
-
-## Validación
+Para revisar la compilación:
 
 ```bash
 cd frontend
-npm run typecheck
 npm run build
 ```
 
-## Seguridad y limitaciones
+## Algunos detalles
 
-- El JWT se mantiene exclusivamente en memoria mientras está abierta la aplicación; no se persiste en `localStorage`.
-- El backend sigue siendo la fuente de verdad para permisos por rol y departamento.
-- La sesión termina al recargar la página y los tokens expiran según la API.
-- El listado actual del backend tiene un límite de 100 empleados por solicitud. No es una estadística global del hospital.
-- Se trata de un prototipo académico funcional sujeto a validación local e integración adicional; no está listo para uso clínico o despliegue público sin endurecimiento.
+La sesión se mantiene en memoria: al actualizar la página hay que iniciar sesión otra vez. Los permisos se validan en la API; ocultar una opción del menú no reemplaza esos controles. Si el backend está apagado, el frontend no podrá cargar los datos.
+
+Esta versión es parte del proyecto académico. Falta terminar la gestión de turnos y realizar las pruebas completas de la interfaz.
