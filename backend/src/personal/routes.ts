@@ -136,6 +136,20 @@ export function registrarRutasPersonalV05(app: FastifyInstance): void {
           await rollback(client);
           return reply.code(404).send({ error: 'Empleado no encontrado' });
         }
+        // Una cuenta vinculada no se suspende desde el expediente laboral.
+        // Primero debe gestionarse el acceso de ese usuario.
+        if (estado_vinculo !== undefined && estado_vinculo !== 'activo') {
+          const cuentaVinculada = await client.query(
+            `SELECT 1 FROM sigpmat.usuarios WHERE id_empleado=$1::bigint LIMIT 1`,
+            [id]
+          );
+          if (cuentaVinculada.rowCount) {
+            await rollback(client);
+            return reply.code(409).send({
+              error: 'El empleado tiene una cuenta vinculada. Gestiona primero su acceso.'
+            });
+          }
+        }
         if (id_cargo) {
           const cargo = await client.query(
             `SELECT 1 FROM sigpmat.cargos WHERE id_cargo=$1::bigint AND activo=TRUE`, [id_cargo]
