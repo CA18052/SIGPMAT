@@ -240,7 +240,7 @@ export default function App() {
           <div className="page-heading">
             <div><div className="eyebrow">ADMINISTRACIÓN OPERATIVA</div><h1>{etiquetas[pagina]}</h1>
               <p>{pagina === 'resumen' ? 'Una vista clara de la información disponible para tu perfil.' : pagina === 'empleados' ? 'Consulta y administra la información del personal autorizado.' : pagina === 'turnos' ? 'Programa turnos y asigna personal según la cobertura necesaria.' : 'Consulta las áreas hospitalarias disponibles según tu rol.'}</p></div>
-            <div className="date-pill">◷ <span>Datos en tiempo real</span></div>
+            <div className="date-pill">◷ <span>Datos consultados en PostgreSQL</span></div>
           </div>
 
           {error && <ErrorMessage text={error} />}
