@@ -1,0 +1,18 @@
+# Aplicación completa: Fastify sirve la API y el frontend compilado.
+services:
+  - type: web
+    name: sigpmat-demo
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev --prefix backend && npm install --include=dev --prefix frontend --no-audit --no-fund && npm run build --prefix frontend && npm run build --prefix backend
+    startCommand: node backend/dist/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
