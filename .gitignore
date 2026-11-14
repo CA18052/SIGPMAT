@@ -1,0 +1,25 @@
+# Credenciales, datos privados y compilaciones
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules/
+**/dist/
+**/coverage/
+**/*.log
+.DS_Store
+Thumbs.db
+*.dump
+*.backup
+*.bak
+*.pem
+*.key
+*.p12
+*.pfx
+*.sqlite
+*.sqlite3
+*.session
+*.swp
+*.tmp
+*.zip
+*.tar.gz
+**/evidencias-privadas/
