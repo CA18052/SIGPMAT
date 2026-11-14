@@ -144,7 +144,7 @@ async function main() {
     'El turno cancelado no está en el listado');
   ok('Cancelación persistida en PostgreSQL — HTTP 200');
 
-  console.log('PRUEBAS DE TURNOS ' + aprobadas + '/14 COMPLETADAS');
+  console.log('PRUEBAS DE TURNOS ' + aprobadas + '/15 COMPLETADAS');
   console.log('El turno ficticio y su asignación cancelada quedan registrados en sigpmat_dev.');
 }
 
