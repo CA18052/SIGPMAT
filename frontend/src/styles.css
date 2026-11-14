@@ -45,3 +45,8 @@
 .employee-form-note{font-size:11px;line-height:1.6;margin:0}
 .employee-success{display:inline-block;background:#eaf7ef;color:#226e50;padding:8px 12px;border-radius:8px;font-size:11px!important;font-weight:700}
 @media(max-width:760px){.employee-form-actions{flex-direction:column-reverse}.employee-form-actions .button{width:100%}}
+
+/* Estado laboral en la ficha del empleado */
+.edit-form .field select{background:#fff;border:1px solid #e1dde2;border-radius:10px;padding:12px 13px;color:#28242d;outline:none}
+.edit-form .field select:focus{border-color:#964f72;box-shadow:0 0 0 3px #964f7218}
+.edit-note{font-size:11px;line-height:1.6;color:#847a85;margin:0}
