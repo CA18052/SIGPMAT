@@ -99,6 +99,7 @@ export default function App() {
   const [editando, setEditando] = useState(false);
   const [nombres, setNombres] = useState('');
   const [apellidos, setApellidos] = useState('');
+  const [estadoEdicion, setEstadoEdicion] = useState<'activo'|'suspendido'|'inactivo'>('activo');
   const [guardando, setGuardando] = useState(false);
   const [mostrarNuevoEmpleado, setMostrarNuevoEmpleado] = useState(false);
   const [mensajeEmpleado, setMensajeEmpleado] = useState('');
@@ -164,6 +165,7 @@ export default function App() {
       ]);
       setDetalle({ empleado: e.empleado, especialidades: a.especialidades });
       setNombres(e.empleado.nombres); setApellidos(e.empleado.apellidos);
+      setEstadoEdicion(e.empleado.estado_vinculo as 'activo'|'suspendido'|'inactivo');
     } catch (e) { manejarError(e); }
     finally { setCargando(false); }
   }
@@ -182,7 +184,7 @@ export default function App() {
     try {
       await requestApi('/api/empleados/' + detalle.empleado.id_empleado, token, {
         method: 'PATCH',
-        body: JSON.stringify({ nombres: nombres.trim(), apellidos: apellidos.trim() })
+        body: JSON.stringify({ nombres: nombres.trim(), apellidos: apellidos.trim(), estado_vinculo: estadoEdicion })
       });
       setEditando(false); setVersion(v => v + 1);
       await abrirEmpleado(detalle.empleado.id_empleado);
@@ -299,8 +301,8 @@ export default function App() {
             <div className="divider"/>
             <h3>Especialidades acreditadas</h3>
             {detalle.especialidades.length ? <div className="specialties">{detalle.especialidades.map(a => <div key={a.id_empleado_especialidad} className="specialty"><strong>{a.nombre}</strong><span>{a.codigo} · Desde {a.vigente_desde}{a.vigente_hasta ? ' hasta ' + a.vigente_hasta : ''}</span></div>)}</div> : <p className="muted">Sin acreditaciones registradas.</p>}
-            {esAdmin && <><div className="divider"/><button type="button" className="button secondary" onClick={() => setEditando(!editando)}>{editando ? 'Cancelar edición' : 'Editar nombre y apellidos'}</button>
-              {editando && <form onSubmit={guardarEmpleado} className="edit-form"><Entrada label="Nombres" value={nombres} onChange={setNombres}/><Entrada label="Apellidos" value={apellidos} onChange={setApellidos}/><button className="button primary" type="submit" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar cambios'}</button></form>}</>}
+            {esAdmin && <><div className="divider"/><button type="button" className="button secondary" onClick={() => setEditando(!editando)}>{editando ? 'Cancelar edición' : 'Editar datos y estado'}</button>
+              {editando && <form onSubmit={guardarEmpleado} className="edit-form"><Entrada label="Nombres" value={nombres} onChange={setNombres}/><Entrada label="Apellidos" value={apellidos} onChange={setApellidos}/><label className="field"><span>Estado laboral</span><select value={estadoEdicion} onChange={e => setEstadoEdicion(e.target.value as 'activo'|'suspendido'|'inactivo')}><option value="activo">Activo</option><option value="suspendido">Suspendido</option><option value="inactivo">Inactivo</option></select></label><p className="edit-note">No se puede suspender a un empleado con cuenta vinculada ni con asignaciones activas.</p><button className="button primary" type="submit" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar cambios'}</button></form>}</>}
           </> : detalleArea ? <>
             <div className="drawer-title"><div className="big-avatar">✚</div><div><h2>{detalleArea.departamento.nombre}</h2><p>{detalleArea.departamento.codigo}</p></div></div>
             <h3>Personal adscrito actualmente</h3>
