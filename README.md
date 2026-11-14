@@ -10,10 +10,11 @@ SIGPMAT busca facilitar el registro del personal médico y la organización de l
 
 - Base de datos PostgreSQL 18 con 24 tablas y reglas de integridad.
 - API en Fastify y TypeScript: inicio de sesión, roles, departamentos, empleados, especialidades y traslados.
-- Interfaz React: inicio de sesión, panel principal, consultas de personal y departamentos y edición básica de empleados.
+- Interfaz React: inicio de sesión, panel principal, consultas de personal y departamentos, edición básica de empleados y pantalla de turnos.
+- API de turnos: creación, consulta, asignación manual y cancelación controlada. Las rutas están implementadas y compilan; falta validar el recorrido completo en la base local.
 - Pruebas SQL y de API, además de compilación automática en GitHub Actions.
 
-La gestión de turnos y asignaciones desde la interfaz sigue en desarrollo. El proyecto todavía no está preparado para usarse en un hospital real.
+La gestión básica de turnos ya está integrada en el código. La asignación automática sigue pendiente y las operaciones nuevas deben verificarse con PostgreSQL. El proyecto todavía no está preparado para usarse en un hospital real.
 
 ## Estructura
 
