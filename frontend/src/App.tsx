@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
+import Turnos from './Turnos';
 import {
   ApiError, iniciarSesion, requestApi
 } from './api';
@@ -7,7 +8,7 @@ import type {
   Acreditacion, Departamento, Empleado, EmpleadoDetalle, Sesion
 } from './api';
 
-type Pagina = 'resumen' | 'empleados' | 'departamentos';
+type Pagina = 'resumen' | 'empleados' | 'departamentos' | 'turnos';
 type Detalle = { empleado: EmpleadoDetalle; especialidades: Acreditacion[] };
 type ListaDepartamento = { departamento: Departamento; empleados: Empleado[] };
 
@@ -194,7 +195,7 @@ export default function App() {
   if (!sesion) return <PantallaLogin onLogin={s => { setSesion(s); setPagina('resumen'); }} />;
 
   const iniciales = sesion.usuario.nombre_usuario.slice(0, 2).toUpperCase();
-  const etiquetas: Record<Pagina, string> = { resumen: 'Panel principal', empleados: 'Personal hospitalario', departamentos: 'Departamentos' };
+  const etiquetas: Record<Pagina, string> = { resumen: 'Panel principal', empleados: 'Personal hospitalario', departamentos: 'Departamentos', turnos: 'Turnos y cobertura' };
 
   return (
     <div className="app-layout">
@@ -206,7 +207,8 @@ export default function App() {
             {([
               ['resumen', '◈', 'Panel principal'],
               ['empleados', '▤', 'Personal médico'],
-              ['departamentos', '▦', 'Departamentos']
+              ['departamentos', '▦', 'Departamentos'],
+              ['turnos', '◷', 'Turnos y cobertura']
             ] as const).map(([id, glyph, text]) => (
               <button key={id} type="button" className={'nav-item ' + (pagina === id ? 'nav-active' : '')} onClick={() => {setPagina(id); setDetalle(null); setDetalleArea(null); setError('');}}>
                 <span className="nav-glyph" aria-hidden="true">{glyph}</span>{text}
@@ -231,7 +233,7 @@ export default function App() {
         <div className="content">
           <div className="page-heading">
             <div><div className="eyebrow">ADMINISTRACIÓN OPERATIVA</div><h1>{etiquetas[pagina]}</h1>
-              <p>{pagina === 'resumen' ? 'Una vista clara de la información disponible para tu perfil.' : pagina === 'empleados' ? 'Consulta y administra la información del personal autorizado.' : 'Consulta las áreas hospitalarias disponibles según tu rol.'}</p></div>
+              <p>{pagina === 'resumen' ? 'Una vista clara de la información disponible para tu perfil.' : pagina === 'empleados' ? 'Consulta y administra la información del personal autorizado.' : pagina === 'turnos' ? 'Programa turnos y asigna personal según la cobertura necesaria.' : 'Consulta las áreas hospitalarias disponibles según tu rol.'}</p></div>
             <div className="date-pill">◷ <span>Datos en tiempo real</span></div>
           </div>
 
@@ -254,7 +256,8 @@ export default function App() {
                   <div className="eyebrow">ACCESOS RÁPIDOS</div><h2>Continuar trabajando</h2>
                   <button type="button" className="quick-link" onClick={() => setPagina('empleados')}><span className="quick-icon">▤</span><span><strong>Consultar personal</strong><small>Datos y acreditaciones</small></span><span>→</span></button>
                   <button type="button" className="quick-link" onClick={() => setPagina('departamentos')}><span className="quick-icon">▦</span><span><strong>Explorar departamentos</strong><small>Áreas y personal adscrito</small></span><span>→</span></button>
-                  <div className="notice"><strong>Próxima integración</strong><p>Calendario de turnos, cobertura de cupos y asignaciones. Estos módulos todavía no están implementados.</p></div>
+                  <button type="button" className="quick-link" onClick={() => setPagina('turnos')}><span className="quick-icon">◷</span><span><strong>Planificar turnos</strong><small>Cupos y asignaciones</small></span><span>→</span></button>
+                  <div className="notice"><strong>En desarrollo</strong><p>La asignación automática y los reportes avanzados todavía no están disponibles.</p></div>
                 </section>
               </div>
             </>
@@ -269,13 +272,15 @@ export default function App() {
               </tbody></table></div>
               <div className="table-footer">Se muestran como máximo 100 registros por consulta. No se presentan datos personales sensibles.</div>
             </section>
+          ) : pagina === 'turnos' ? (
+            <Turnos token={token} departamentos={departamentos} onSesionExpirada={cerrarSesion} />
           ) : (
             <div className="departments-grid">
               {departamentos.map(d => <article className="department-card" key={d.id_departamento}><div className="dept-symbol">✚</div><div className="eyebrow">{d.codigo}</div><h2>{d.nombre}</h2><p>Área hospitalaria autorizada para este perfil.</p><button type="button" className="button secondary" onClick={() => abrirDepartamento(d.id_departamento)}>Ver personal adscrito <span>→</span></button></article>)}
               {departamentos.length === 0 && <div className="empty">No hay departamentos disponibles para este usuario.</div>}
             </div>
           )}
-          <footer className="footer">SIGPMAT · Universidad de El Salvador · Proyecto académico 2026 <span>v0.1 — Interfaz web</span></footer>
+          <footer className="footer">SIGPMAT · Universidad de El Salvador · Proyecto académico 2026 <span>v0.2 — Interfaz web</span></footer>
         </div>
       </main>
 
