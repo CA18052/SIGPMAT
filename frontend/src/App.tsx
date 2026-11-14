@@ -194,8 +194,6 @@ export default function App() {
   if (!sesion) return <PantallaLogin onLogin={s => { setSesion(s); setPagina('resumen'); }} />;
 
   const visible = filtrados ?? empleados;
-  const activo = visible.filter(e => e.estado_vinculo === 'activo').length;
-  const suspendido = visible.filter(e => e.estado_vinculo !== 'activo').length;
   const iniciales = sesion.usuario.nombre_usuario.slice(0, 2).toUpperCase();
   const etiquetas: Record<Pagina, string> = { resumen: 'Panel principal', empleados: 'Personal hospitalario', departamentos: 'Departamentos' };
 
