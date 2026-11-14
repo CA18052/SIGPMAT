@@ -34,3 +34,14 @@
 .shift-submit{width:100%;justify-content:center}
 @media(max-width:1050px){.shift-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.shift-toolbar{align-items:flex-start;flex-direction:column}.shift-form{grid-template-columns:1fr}.shift-actions{flex-direction:column;align-items:stretch}.shift-metrics{gap:10px}.shift-metrics>div{padding:15px}.shift-metrics strong{font-size:26px}}
+
+/* Registro de personal */
+.employee-form-intro{font-size:12px;line-height:1.7;margin:0 0 24px}
+.employee-form{display:grid;gap:17px}
+.employee-form label{display:grid;gap:8px;color:#514751;font-size:12px;font-weight:700}
+.employee-form input,.employee-form select{background:#fff;border:1px solid #e7dfe5;border-radius:10px;outline:none;padding:12px;color:#342c36;width:100%;min-width:0}
+.employee-form input:focus,.employee-form select:focus{border-color:#95506e;box-shadow:0 0 0 3px #95506e1a}
+.employee-form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:10px}
+.employee-form-note{font-size:11px;line-height:1.6;margin:0}
+.employee-success{display:inline-block;background:#eaf7ef;color:#226e50;padding:8px 12px;border-radius:8px;font-size:11px!important;font-weight:700}
+@media(max-width:760px){.employee-form-actions{flex-direction:column-reverse}.employee-form-actions .button{width:100%}}
