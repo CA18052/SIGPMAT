@@ -57,6 +57,12 @@ cd ../frontend
 npm run build
 ```
 
+## Versión de demostración en la nube
+
+El repositorio ya incluye el archivo `render.yaml` y las migraciones adaptadas a Neon. La configuración completa está explicada en [Despliegue gratuito](docs/DESPLIEGUE_GRATUITO.md). Todavía falta activar el servicio y comprobar que funciona en la URL pública.
+
+La instalación local del Mac se conserva como respaldo para la presentación.
+
 ## Datos de prueba
 
 El proyecto utiliza cuentas y registros ficticios. No deben subirse archivos `.env`, contraseñas, tokens ni respaldos con información personal.
