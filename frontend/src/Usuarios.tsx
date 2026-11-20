@@ -101,7 +101,11 @@ export default function Usuarios({
       setMiContrasena('');
       // Cambiar el carnet revoca el JWT: iniciar sesión usando el nuevo carnet.
       onSesionExpirada();
-    }catch(e){manejarError(e);}
+    }catch(e){
+      if(e instanceof ApiError && e.status===401 && e.message.toLowerCase().includes('contraseña actual')){
+        setError(e.message);
+      }else manejarError(e);
+    }
     finally{setProcesando('');}
   }
 
