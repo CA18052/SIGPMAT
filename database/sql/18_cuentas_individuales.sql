@@ -46,6 +46,11 @@ WHERE u.id_usuario = 1
       AND r.codigo='ADMIN_GENERAL' AND r.activo=TRUE
   );
 
+-- Garantiza una única cuenta con control exclusivo de usuarios y futura auditoría.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_sigpmat_superadmin_unico
+  ON sigpmat.usuarios(es_superadministrador)
+  WHERE es_superadministrador=TRUE;
+
 COMMENT ON COLUMN sigpmat.usuarios.es_superadministrador IS
   'Privilegio exclusivo de administración de usuarios y futura auditoría; no asignable por API.';
 COMMENT ON COLUMN sigpmat.usuarios.debe_cambiar_contrasena IS
