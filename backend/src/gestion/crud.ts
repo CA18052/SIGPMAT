@@ -156,7 +156,7 @@ export function registrarCrudGestion(app: FastifyInstance) {
           OR EXISTS(SELECT 1 FROM sigpmat.propuestas_asignacion WHERE id_empleado=$1::bigint)
           OR EXISTS(SELECT 1 FROM sigpmat.disponibilidades WHERE id_empleado=$1::bigint)
           OR EXISTS(SELECT 1 FROM sigpmat.excepciones_disponibilidad WHERE id_empleado=$1::bigint)
-          OR EXISTS(SELECT 1 FROM sigpmat.registros_asistencia WHERE id_empleado=$1::bigint)
+          OR EXISTS(SELECT 1 FROM sigpmat.registros_asistencia ra JOIN sigpmat.asignaciones_turno at ON at.id_asignacion=ra.id_asignacion WHERE at.id_empleado=$1::bigint)
         ) AS tiene`,[request.params.id]);
       if(historial.rows[0]?.tiene){await revertir(client);return reply.code(409).send({error:'Este empleado tiene historial laboral o asignaciones. Conserva su expediente y cambia su estado a Inactivo desde Editar.'});}
       await client.query('DELETE FROM sigpmat.empleado_especialidad WHERE id_empleado=$1::bigint',[request.params.id]);
