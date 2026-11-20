@@ -285,3 +285,6 @@
   .shift-crud-actions{flex-direction:column}
   .shift-crud-actions .button{width:100%}
 }
+
+/* Retratos fotográficos de la demo, cuadrícula optimizada 4×4 */
+.employee-avatar .employee-avatar-portrait{position:absolute;inset:0;display:block;z-index:1;background-size:400% 400%;background-repeat:no-repeat;background-color:#e4e7ed}
