@@ -1,6 +1,13 @@
 -- SIGPMAT · Migración 19: registro de visitantes, reautenticación de un solo uso y auditoría.
 -- Es aditiva: no borra cuentas ni registros del prototipo.
 BEGIN;
+-- Nuevo tipo de cuenta público, distinto de las cuentas asignadas por el administrador.
+ALTER TABLE sigpmat.usuarios DROP CONSTRAINT IF EXISTS ck_usuarios_tipo_cuenta;
+ALTER TABLE sigpmat.usuarios ADD CONSTRAINT ck_usuarios_tipo_cuenta
+ CHECK (tipo_cuenta IN ('demo','integrante','docente','visitante'));
+CREATE UNIQUE INDEX IF NOT EXISTS ux_usuarios_login_ci
+ ON sigpmat.usuarios(lower(nombre_usuario));
+
 INSERT INTO sigpmat.roles (codigo,nombre,descripcion,activo)
 SELECT 'VISITANTE_LECTURA','Visitante de lectura',
        'Consulta departamentos, personal no sensible y turnos sin permiso de modificación.',TRUE
