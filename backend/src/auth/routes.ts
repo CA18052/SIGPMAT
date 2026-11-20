@@ -126,8 +126,7 @@ export async function autorizar(
 }
 
 export function registrarRutasAutenticacion(app: FastifyInstance): void {
-  // Registro público de solo lectura. No admite roles ni permisos en el cuerpo.
-  // El formato se valida en el servidor, no prueba la titularidad del carnet.
+  // Registro público de solo lectura. El carnet no prueba la titularidad.
   app.post<{Body:{carnet:string;contrasena:string;nombre_mostrado?:string}}>(
     '/api/auth/registrar',{
       config:{rateLimit:{max:3,timeWindow:'10 minutes'}},
@@ -135,152 +134,7 @@ export function registrarRutasAutenticacion(app: FastifyInstance): void {
         type:'object',additionalProperties:false,
         required:['carnet','contrasena'],
         properties:{
-          carnet:{type:'string',pattern:'^[A-Z]{2}[0-9]{5}  app.post<{ Body: LoginBody }>(
-    '/api/auth/login',
-    {
-      config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
-      schema: {
-        body: {
-          type: 'object',
-          required: ['nombre_usuario', 'contrasena'],
-          additionalProperties: false,
-          properties: {
-            nombre_usuario: { type: 'string', minLength: 1, maxLength: 50 },
-            contrasena: { type: 'string', minLength: 1, maxLength: 128 }
-          }
-        }
-      }
-    },
-    async (request, reply) => {
-      reply.header('Cache-Control', 'no-store');
-      const { nombre_usuario, contrasena } = request.body;
-      const { rows } = await pool.query<AccountRow>(
-        `SELECT id_usuario::text, nombre_usuario, estado, contrasena_hash,
-                 nombre_mostrado, tipo_cuenta, es_superadministrador,
-                 debe_cambiar_contrasena, sesion_version
-           FROM sigpmat.usuarios WHERE lower(nombre_usuario) = lower($1)`,
-        [nombre_usuario.trim()]
-      );
-      const account = rows[0];
-      if (!account) {
-        await argon2.verify(dummyHash, contrasena);
-        return reply.code(401).send({ error: 'Credenciales invalidas' });
-      }
-
-      let correct = false;
-      try {
-        correct = await argon2.verify(account.contrasena_hash, contrasena);
-      } catch {
-        // Cuenta historica sin un hash compatible: error generico al cliente.
-        request.log.warn('Hash de credenciales no compatible');
-      }
-      if (!correct || account.estado !== 'activa') {
-        return reply.code(401).send({ error: 'Credenciales invalidas' });
-      }
-      const roles = await rolesVigentes(account.id_usuario);
-      if (roles.length === 0) {
-        return reply.code(403).send({ error: 'Acceso no autorizado' });
-      }
-
-      await pool.query(
-        `UPDATE sigpmat.usuarios SET ultimo_acceso_at = now()
-          WHERE id_usuario = $1::bigint`,
-        [account.id_usuario]
-      );
-      const token = await reply.jwtSign(
-        { sub: account.id_usuario, sv: account.sesion_version },
-        { expiresIn: '15m' }
-      );
-      return reply.send({
-        access_token: token,
-        token_type: 'Bearer',
-        expires_in_seconds: 900,
-        usuario: {
-          id_usuario: account.id_usuario,
-          nombre_usuario: account.nombre_usuario,
-          roles,
-          nombre_mostrado: account.nombre_mostrado,
-          tipo_cuenta: account.tipo_cuenta,
-          es_superadministrador: account.es_superadministrador,
-          debe_cambiar_contrasena: account.debe_cambiar_contrasena
-        }
-      });
-    }
-  );
-
-  // Cambio de clave temporal y voluntario. Invalida de inmediato TODOS los
-  // JWT previos al incrementar sesion_version, sin depender de su vencimiento.
-  app.post<{ Body: { contrasena_actual: string; nueva_contrasena: string } }>(
-    '/api/auth/cambiar-contrasena',
-    {
-      config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
-      schema: { body: {
-        type: 'object', additionalProperties: false,
-        required: ['contrasena_actual','nueva_contrasena'],
-        properties: {
-          contrasena_actual: { type: 'string', minLength: 1, maxLength: 128 },
-          nueva_contrasena: { type: 'string', minLength: 12, maxLength: 128 }
-        }
-      }}
-    },
-    async (request, reply) => {
-      reply.header('Cache-Control','no-store');
-      let sub: unknown;
-      let sv: unknown;
-      try {
-        const claims = await request.jwtVerify() as { sub?: unknown; sv?: unknown };
-        sub = claims.sub;
-        sv = claims.sv;
-      } catch { return reply.code(401).send({error:'Sesión inválida o vencida'}); }
-      if (typeof sub !== 'string' || !/^[0-9]{1,18}$/.test(sub)) {
-        return reply.code(401).send({error:'Sesión inválida'});
-      }
-      const { contrasena_actual, nueva_contrasena } = request.body;
-      if (contrasena_actual === nueva_contrasena) {
-        return reply.code(400).send({error:'La nueva contraseña debe ser diferente de la actual.'});
-      }
-      const {rows} = await pool.query<AccountRow>(
-        `SELECT id_usuario::text,nombre_usuario,estado,contrasena_hash,
-                nombre_mostrado,tipo_cuenta,es_superadministrador,
-                debe_cambiar_contrasena,sesion_version
-           FROM sigpmat.usuarios WHERE id_usuario=$1::bigint`,[sub]);
-      const account=rows[0];
-      if (!account || account.estado !== 'activa' || (sv ?? 0) !== account.sesion_version) {
-        return reply.code(401).send({error:'Sesión revocada. Inicia sesión nuevamente.'});
-      }
-      const valida = await argon2.verify(account.contrasena_hash,contrasena_actual).catch(()=>false);
-      if (!valida) return reply.code(401).send({error:'La contraseña actual es incorrecta.'});
-      const hash = await argon2.hash(nueva_contrasena,{
-        type:argon2.argon2id,memoryCost:19456,timeCost:2,parallelism:1
-      });
-      const result=await pool.query(
-        `UPDATE sigpmat.usuarios SET contrasena_hash=$2,
-          debe_cambiar_contrasena=FALSE,sesion_version=sesion_version+1
-          WHERE id_usuario=$1::bigint AND contrasena_hash=$3
-            AND sesion_version=$4 AND estado='activa'`,
-        [sub,hash,account.contrasena_hash,account.sesion_version]);
-      if (result.rowCount!==1) {
-        return reply.code(409).send({error:'La cuenta cambió durante la operación. Inicia sesión otra vez.'});
-      }
-      return reply.send({status:'ok',mensaje:'Contraseña actualizada. Inicia sesión con tu nueva contraseña.'});
-    }
-  );
-
-  app.get('/api/auth/me', async (request, reply) => {
-    reply.header('Cache-Control', 'no-store');
-    const usuario = await autorizar(request, reply);
-    if (!usuario) return reply;
-    return { usuario };
-  });
-
-  app.get('/api/admin/ping', async (request, reply) => {
-    reply.header('Cache-Control', 'no-store');
-    const usuario = await autorizar(request, reply, 'ADMIN_GENERAL');
-    if (!usuario) return reply;
-    return { status: 'ok', acceso: 'ADMIN_GENERAL', usuario: usuario.nombre_usuario };
-  });
-}
-,minLength:7,maxLength:7},
+          carnet:{type:'string',pattern:'^[A-Z]{2}[0-9]{5}$',minLength:7,maxLength:7},
           contrasena:{type:'string',minLength:12,maxLength:128},
           nombre_mostrado:{type:'string',minLength:3,maxLength:120}
         }
@@ -288,15 +142,13 @@ export function registrarRutasAutenticacion(app: FastifyInstance): void {
     },async(request,reply)=>{
       reply.header('Cache-Control','no-store');
       const {carnet,contrasena,nombre_mostrado}=request.body;
-      if(!/^[A-Z]{2}[0-9]{5}$/.test(carnet)){
-        return reply.code(400).send({error:'El carnet debe contener dos letras mayúsculas y cinco dígitos.'});
-      }
+      if(!/^[A-Z]{2}[0-9]{5}$/.test(carnet))
+        return reply.code(400).send({error:'Carnet inválido: dos letras mayúsculas y cinco números.'});
       if(/[\u0000-\u001f\u007f]/.test(contrasena))
-        return reply.code(400).send({error:'La contraseña contiene caracteres de control.'});
+        return reply.code(400).send({error:'La contraseña contiene caracteres no permitidos.'});
       const nombre=nombre_mostrado?.trim()||carnet;
-      if(nombre.length>120 || nombre.length<3)
-        return reply.code(400).send({error:'El nombre mostrado es inválido.'});
-      // Normalizar para evitar correos personales o datos del hospital.
+      if(nombre.length>120||nombre.length<3)
+        return reply.code(400).send({error:'Nombre mostrado inválido.'});
       const hash=await argon2.hash(contrasena,{
         type:argon2.argon2id,memoryCost:19456,timeCost:2,parallelism:1
       });
@@ -304,11 +156,11 @@ export function registrarRutasAutenticacion(app: FastifyInstance): void {
       try{
         await client.query('BEGIN');
         const existe=await client.query(
-          'SELECT 1 FROM sigpmat.usuarios WHERE lower(nombre_usuario)=lower($1) LIMIT 1',
-          [carnet]);
+          'SELECT 1 FROM sigpmat.usuarios WHERE lower(nombre_usuario)=lower($1) LIMIT 1',[carnet]
+        );
         if(existe.rowCount){
           await client.query('ROLLBACK');
-          return reply.code(409).send({error:'Este carnet ya está registrado. Solicita ayuda al administrador si no reconoces la cuenta.'});
+          return reply.code(409).send({error:'Este carnet ya está registrado. Contacta al administrador si no reconoces la cuenta.'});
         }
         const rol=await client.query<{id_rol:string}>(
           "SELECT id_rol::text FROM sigpmat.roles WHERE codigo='VISITANTE_LECTURA' AND activo=TRUE");
@@ -317,8 +169,8 @@ export function registrarRutasAutenticacion(app: FastifyInstance): void {
           `INSERT INTO sigpmat.usuarios(
             nombre_usuario,correo_institucional,contrasena_hash,nombre_mostrado,
             tipo_cuenta,estado,es_superadministrador,debe_cambiar_contrasena,sesion_version)
-          VALUES($1,$2,$3,$4,'visitante','activa',FALSE,FALSE,0)
-          RETURNING id_usuario::text`,
+           VALUES($1,$2,$3,$4,'visitante','activa',FALSE,FALSE,0)
+           RETURNING id_usuario::text`,
           [carnet,carnet.toLowerCase()+'@sigpmat.invalid',hash,nombre]
         );
         await client.query(
@@ -329,18 +181,18 @@ export function registrarRutasAutenticacion(app: FastifyInstance): void {
         return reply.code(201).send({
           registrado:true,
           mensaje:'Cuenta de lectura creada. Ya puedes iniciar sesión con tu carnet.',
-          nombre_usuario:carnet,
-          permisos:'Solo consulta'
+          nombre_usuario:carnet,permisos:'Solo consulta'
         });
       }catch(e){
         await client.query('ROLLBACK').catch(()=>{});
         if((e as {code?:string}).code==='23505')
           return reply.code(409).send({error:'Este carnet ya está registrado.'});
         request.log.error({err:e},'Error al registrar cuenta pública');
-        return reply.code(500).send({error:'No se pudo registrar la cuenta. Intenta nuevamente.'});
+        return reply.code(500).send({error:'No se pudo crear la cuenta. Intenta nuevamente.'});
       }finally{client.release();}
     }
   );
+
   app.post<{ Body: LoginBody }>(
     '/api/auth/login',
     {
