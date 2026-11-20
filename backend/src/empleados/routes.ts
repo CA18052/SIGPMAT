@@ -9,7 +9,7 @@ import { autorizar } from '../auth/routes.js';
  */
 type Cuenta = { id_usuario: string; roles: string[] };
 type Parametros = { id: string };
-type Filtro = { departamento_id?: string };
+type Filtro = { departamento_id?: string; cargo?: string; estado?: string };
 type EmpleadoListado = {
   id_empleado: string;
   codigo_empleado: string;
@@ -147,7 +147,11 @@ export function registrarRutasEmpleados(app: FastifyInstance): void {
       schema: {
         querystring: {
           type: 'object', additionalProperties: false,
-          properties: { departamento_id: { type: 'string', pattern: ID, maxLength: 19 } }
+          properties: {
+            departamento_id: { type: 'string', pattern: ID, maxLength: 19 },
+            cargo: { type: 'string', minLength: 1, maxLength: 70 },
+            estado: { type: 'string', enum: ['activo','inactivo','suspendido'] }
+          }
         }
       }
     },
@@ -155,6 +159,7 @@ export function registrarRutasEmpleados(app: FastifyInstance): void {
       reply.header('Cache-Control', 'no-store');
       const auth = await cuentaAutorizada(request, reply);
       if (!auth) return reply;
+      const { cargo, estado } = request.query;
       const idDepto = request.query.departamento_id;
       if (idDepto && !idOk(idDepto)) {
         return reply.code(400).send({ error: 'Identificador de departamento invalido' });
@@ -181,6 +186,8 @@ export function registrarRutasEmpleados(app: FastifyInstance): void {
                       AND (ed.fecha_fin IS NULL OR ed.fecha_fin >= CURRENT_DATE)
                   )
                 )
+            AND ($4::varchar IS NULL OR c.nombre=$4::varchar)
+            AND ($5::varchar IS NULL OR e.estado_vinculo=$5::varchar)
             AND (
                   $2::boolean
                   OR (
@@ -208,7 +215,8 @@ export function registrarRutasEmpleados(app: FastifyInstance): void {
                 )
           ORDER BY e.codigo_empleado, e.id_empleado
           LIMIT 100`,
-        [idDepto ?? null, auth.admin || auth.lectura, auth.cuenta.id_usuario]
+        [idDepto ?? null, auth.admin || auth.lectura, auth.cuenta.id_usuario,
+          cargo ?? null, estado ?? null]
       );
       return { empleados: rows, limite: 100 };
     }
