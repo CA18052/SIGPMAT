@@ -479,7 +479,7 @@ export default function App() {
               <div className="table-footer">Hasta 100 empleados por consulta. DUI y datos de contacto solo visibles para la administración.</div>
             </section>
           ) : pagina === 'turnos' ? (
-            <Turnos token={token} departamentos={departamentos} onSesionExpirada={cerrarSesion} />
+            <Turnos token={token} departamentos={departamentos} esAdmin={esAdmin} onSesionExpirada={cerrarSesion} />
           ) : (
             <div className="department-section">
               <div className="department-section-header">
