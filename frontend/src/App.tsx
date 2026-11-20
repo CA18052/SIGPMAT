@@ -253,14 +253,27 @@ export default function App() {
   }, [token, version, autorizado, validandoSesion]);
 
   useEffect(() => {
-    if (!sesion || !autorizado || validandoSesion || sesion.usuario.debe_cambiar_contrasena || !filtro) { setFiltrados(null); return; }
-    let cancelar = false;
-    requestApi<{ empleados: Empleado[] }>('/api/empleados?departamento_id=' + encodeURIComponent(filtro), token)
-      .then(r => { if (!cancelar) { setFiltrados(r.empleados); setError(''); } })
-      .catch(e => { if (!cancelar) manejarError(e); });
-    return () => { cancelar = true; };
+    if (!sesion || !autorizado || validandoSesion ||
+        sesion.usuario.debe_cambiar_contrasena ||
+        !(filtro || filtroCargo || filtroEstado)) {
+      setFiltrados(null); return;
+    }
+    let cancelar=false;
+    const params=new URLSearchParams();
+    if(filtro)params.set('departamento_id',filtro);
+    if(filtroCargo)params.set('cargo',filtroCargo);
+    if(filtroEstado)params.set('estado',filtroEstado);
+    requestApi<{empleados:Empleado[]}>('/api/empleados?'+params.toString(),token)
+      .then(r=>{if(!cancelar){setFiltrados(r.empleados);setError('');}})
+      .catch(e=>{if(!cancelar)manejarError(e);});
+    return()=>{cancelar=true;};
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtro, token, version, autorizado, validandoSesion]);
+  },[filtro,filtroCargo,filtroEstado,token,version,autorizado,validandoSesion]);
+
+  const cargosDisponibles=useMemo(()=>
+    [...new Set(empleados.map(e=>e.cargo))].sort((a,b)=>a.localeCompare(b,'es')),
+    [empleados]);
+  const filtrosActivos=[filtro,filtroCargo,filtroEstado].filter(Boolean).length;
 
   const listado = useMemo(() => {
     const needle = busqueda.trim().toLocaleLowerCase('es');
@@ -579,9 +592,9 @@ export default function App() {
                     <input type="search" value={busqueda} placeholder="Nombre, código o cargo…"
                       onChange={e => setBusqueda(e.target.value)} />
                   </label>
-                  <button className={'button ghost small employee-filter-toggle' + (filtro ? ' has-filter' : '')}
+                  <button className={'button ghost small employee-filter-toggle' + (filtrosActivos ? ' has-filter' : '')}
                     type="button" aria-expanded={mostrarFiltros} aria-controls="employee-filter-options"
-                    onClick={() => setMostrarFiltros(v => !v)}>☷ Filtros{filtro ? ' · 1' : ''}</button>
+                    onClick={() => setMostrarFiltros(v => !v)}>☷ Filtros{filtrosActivos ? ' · '+filtrosActivos : ''}</button>
                   {esAdmin && <button type="button" className="button primary small employee-create-button"
                     onClick={() => {setMensajeEmpleado('');setMostrarNuevoEmpleado(true);}}>+ Registrar empleado</button>}
                 </div>
@@ -593,7 +606,23 @@ export default function App() {
                     {departamentos.map(d => <option key={d.id_departamento} value={d.id_departamento}>{d.nombre}</option>)}
                   </select>
                 </label>
-                <button type="button" className="text-button" onClick={() => {setFiltro('');setMostrarFiltros(false);}}>Limpiar filtros</button>
+                <label>Cargo
+                  <select value={filtroCargo} onChange={e => setFiltroCargo(e.target.value)}>
+                    <option value="">Todos los cargos</option>
+                    {cargosDisponibles.map(cargo=><option key={cargo} value={cargo}>{cargo}</option>)}
+                  </select>
+                </label>
+                <label>Estado
+                  <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
+                    <option value="">Todos los estados</option>
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                    <option value="suspendido">Suspendido</option>
+                  </select>
+                </label>
+                <button type="button" className="text-button" onClick={() => {
+                  setFiltro('');setFiltroCargo('');setFiltroEstado('');setMostrarFiltros(false);
+                }}>Limpiar filtros</button>
               </div>}
               <div className="table-wrap employee-desktop-table"><table>
                 <thead><tr><th>Código</th><th>Nombre completo</th><th>Cargo</th><th>Estado</th><th>Acción</th></tr></thead>
