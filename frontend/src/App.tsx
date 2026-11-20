@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import Turnos from './Turnos';
 import NuevoEmpleado from './NuevoEmpleado';
@@ -103,6 +103,12 @@ export default function App() {
   const [guardando, setGuardando] = useState(false);
   const [mostrarNuevoEmpleado, setMostrarNuevoEmpleado] = useState(false);
   const [mensajeEmpleado, setMensajeEmpleado] = useState('');
+  const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
+  const menuRef = useRef<HTMLElement | null>(null);
+  const botonCerrarMenuRef = useRef<HTMLButtonElement | null>(null);
+  const botonSalirRef = useRef<HTMLButtonElement | null>(null);
+  const disparadorMenuRef = useRef<HTMLButtonElement | null>(null);
+  const destinoMenuRef = useRef<'navegacion' | 'perfil'>('navegacion');
 
   const esAdmin = sesion?.usuario.roles.includes('ADMIN_GENERAL') ?? false;
   const esJefe = sesion?.usuario.roles.includes('JEFE_AREA') ?? false;
@@ -192,7 +198,61 @@ export default function App() {
     finally { setGuardando(false); }
   }
 
+  function abrirMenuMovil(destino: 'navegacion' | 'perfil', boton: HTMLButtonElement) {
+    destinoMenuRef.current = destino;
+    disparadorMenuRef.current = boton;
+    setMenuMovilAbierto(true);
+  }
+
+  // El panel móvil conserva el foco y bloquea el desplazamiento de fondo.
+  useEffect(() => {
+    if (!menuMovilAbierto) return;
+
+    const desbordamientoAnterior = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const objetivo = destinoMenuRef.current === 'perfil'
+      ? botonSalirRef.current
+      : botonCerrarMenuRef.current;
+    objetivo?.focus();
+
+    function pulsarTecla(evento: KeyboardEvent) {
+      if (evento.key === 'Escape') {
+        evento.preventDefault();
+        setMenuMovilAbierto(false);
+        return;
+      }
+      if (evento.key !== 'Tab' || !menuRef.current) return;
+      const controles = Array.from(
+        menuRef.current.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')
+      ).filter(elemento => elemento.getClientRects().length > 0);
+      if (controles.length === 0) return;
+      const primero = controles[0];
+      const ultimo = controles[controles.length - 1];
+      if (evento.shiftKey && document.activeElement === primero) {
+        evento.preventDefault();
+        ultimo.focus();
+      } else if (!evento.shiftKey && document.activeElement === ultimo) {
+        evento.preventDefault();
+        primero.focus();
+      }
+    }
+
+    const escritorio = window.matchMedia('(min-width: 761px)');
+    const comprobarAncho = () => { if (escritorio.matches) setMenuMovilAbierto(false); };
+    window.addEventListener('keydown', pulsarTecla);
+    escritorio.addEventListener('change', comprobarAncho);
+
+    return () => {
+      document.body.style.overflow = desbordamientoAnterior;
+      window.removeEventListener('keydown', pulsarTecla);
+      escritorio.removeEventListener('change', comprobarAncho);
+      if (disparadorMenuRef.current?.isConnected) disparadorMenuRef.current.focus();
+    };
+  }, [menuMovilAbierto]);
+
   function cerrarSesion() {
+    setMenuMovilAbierto(false);
     setSesion(null); setDetalle(null); setDetalleArea(null);
     setMostrarNuevoEmpleado(false); setMensajeEmpleado('');
     setDepartamentos([]); setEmpleados([]); setPagina('resumen'); setFiltro(''); setBusqueda('');
@@ -205,9 +265,18 @@ export default function App() {
 
   return (
     <div className="app-layout">
-      <aside className="sidebar">
+      <button className={'mobile-menu-backdrop' + (menuMovilAbierto ? ' visible' : '')}
+        type="button" aria-label="Cerrar menú de navegación" tabIndex={menuMovilAbierto ? 0 : -1}
+        onClick={() => setMenuMovilAbierto(false)} />
+      <aside ref={menuRef} id="sigpmat-menu" className={'sidebar' + (menuMovilAbierto ? ' sidebar-open' : '')}
+        aria-label="Menú principal" role={menuMovilAbierto ? 'dialog' : undefined}
+        aria-modal={menuMovilAbierto ? true : undefined}>
         <div className="sidebar-top">
-          <div className="brand-lockup"><div className="brand-symbol">✚</div><span>SIGPMAT <small>GESTIÓN HOSPITALARIA</small></span></div>
+          <div className="sidebar-brand-row">
+            <div className="brand-lockup"><div className="brand-symbol">✚</div><span>SIGPMAT <small>GESTIÓN HOSPITALARIA</small></span></div>
+            <button ref={botonCerrarMenuRef} className="mobile-menu-close" type="button"
+              aria-label="Cerrar menú" onClick={() => setMenuMovilAbierto(false)}>✕</button>
+          </div>
           <p className="nav-section-label">ESPACIO DE TRABAJO</p>
           <nav aria-label="Navegación principal">
             {([
@@ -216,7 +285,7 @@ export default function App() {
               ['departamentos', '▦', 'Departamentos'],
               ['turnos', '◷', 'Turnos y cobertura']
             ] as const).map(([id, glyph, text]) => (
-              <button key={id} type="button" className={'nav-item ' + (pagina === id ? 'nav-active' : '')} onClick={() => {setPagina(id); setDetalle(null); setDetalleArea(null); setError('');}}>
+              <button key={id} type="button" className={'nav-item ' + (pagina === id ? 'nav-active' : '')} onClick={() => {setPagina(id); setDetalle(null); setDetalleArea(null); setError(''); setMenuMovilAbierto(false);}}>
                 <span className="nav-glyph" aria-hidden="true">{glyph}</span>{text}
               </button>
             ))}
@@ -226,12 +295,44 @@ export default function App() {
         <div className="sidebar-profile">
           <span className="profile-avatar">{iniciales}</span>
           <div className="profile-copy"><strong>{sesion.usuario.nombre_usuario}</strong><span>{esAdmin ? 'Administrador general' : esJefe ? 'Jefe de área' : 'Personal médico'}</span></div>
-          <button className="icon-btn exit" type="button" aria-label="Cerrar sesión" title="Cerrar sesión" onClick={cerrarSesion}>↪</button>
+          <button ref={botonSalirRef} className="logout-button" type="button" onClick={cerrarSesion}>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+              strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <path d="m16 17 5-5-5-5M21 12H9" />
+            </svg>
+            <span>Cerrar sesión</span>
+          </button>
         </div>
       </aside>
 
-      <main className="main">
+      <main className="main" inert={menuMovilAbierto}>
         <header className="topbar">
+          <div className="mobile-topbar">
+            <button type="button" className="mobile-header-button" aria-label="Abrir menú de navegación"
+              aria-controls="sigpmat-menu" aria-expanded={menuMovilAbierto}
+              onClick={evento => abrirMenuMovil('navegacion', evento.currentTarget)}>
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            </button>
+            <div className="mobile-page-identity">
+              <span>SIGPMAT</span>
+              <h1>{etiquetas[pagina]}</h1>
+            </div>
+            <button type="button" className="mobile-header-button" aria-label="Actualizar datos"
+              onClick={() => setVersion(v => v + 1)} disabled={cargando}>
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <path d="M20 7v5h-5M4 17v-5h5" />
+                <path d="M5.5 9a7 7 0 0 1 12-2l2.5 5M18.5 15a7 7 0 0 1-12 2L4 12" />
+              </svg>
+            </button>
+            <button type="button" className="mobile-profile-trigger" aria-label="Abrir perfil de usuario"
+              aria-controls="sigpmat-menu" aria-expanded={menuMovilAbierto}
+              onClick={evento => abrirMenuMovil('perfil', evento.currentTarget)}>
+              {iniciales}
+            </button>
+          </div>
           <div className="breadcrumbs">SIGPMAT <span>/</span> {etiquetas[pagina]}</div>
           <div className="top-actions"><span className="live-dot" /><span className="top-status">Entorno local</span><button type="button" className="button ghost small" onClick={() => setVersion(v => v + 1)} disabled={cargando}>↻ Actualizar</button></div>
         </header>
