@@ -5,10 +5,14 @@ import NuevoEmpleado from './NuevoEmpleado';
 import FormularioDepartamento from './FormularioDepartamento';
 import AvatarEmpleado from './AvatarEmpleado';
 import {
+  actualizarUsuarioDeSesion, borrarSesionDePestana, guardarPaginaEnPestana,
+  guardarSesionEnPestana, recuperarPaginaDePestana, recuperarSesionDePestana
+} from './session';
+import {
   ApiError, iniciarSesion, requestApi
 } from './api';
 import type {
-  Acreditacion, Departamento, Empleado, EmpleadoDetalle, Sesion
+  Acreditacion, Departamento, Empleado, EmpleadoDetalle, Sesion, Usuario
 } from './api';
 
 type Pagina = 'resumen' | 'empleados' | 'departamentos' | 'turnos';
@@ -86,8 +90,9 @@ function Estado({ estado }: { estado: string }) {
 }
 
 export default function App() {
-  const [sesion, setSesion] = useState<Sesion | null>(null);
-  const [pagina, setPagina] = useState<Pagina>('resumen');
+  const [sesion, setSesion] = useState<Sesion | null>(recuperarSesionDePestana);
+  const [validandoSesion, setValidandoSesion] = useState(() => recuperarSesionDePestana() !== null);
+  const [pagina, setPagina] = useState<Pagina>(recuperarPaginaDePestana);
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [filtrados, setFiltrados] = useState<Empleado[] | null>(null);
@@ -120,6 +125,41 @@ export default function App() {
   const disparadorMenuRef = useRef<HTMLButtonElement | null>(null);
   const destinoMenuRef = useRef<'navegacion' | 'perfil'>('navegacion');
 
+  // Validación al recuperar una sesión: nunca confiar sólo en sessionStorage.
+  // Fastify consulta la cuenta y los roles vigentes antes de permitir operaciones.
+  useEffect(() => {
+    const guardada = recuperarSesionDePestana();
+    if (!guardada) { setValidandoSesion(false); return; }
+    let cancelado = false;
+    requestApi<{ usuario: Usuario }>('/api/auth/me', guardada.access_token)
+      .then(({ usuario }) => {
+        if (cancelado) return;
+        if (usuario.id_usuario !== guardada.usuario.id_usuario) {
+          borrarSesionDePestana();
+          setSesion(null);
+          return;
+        }
+        actualizarUsuarioDeSesion(usuario);
+        setSesion({ ...guardada, usuario });
+      })
+      .catch(e => {
+        if (cancelado) return;
+        if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
+          borrarSesionDePestana();
+          setSesion(null);
+        }
+        // Si Render está despertando o no hay red, conservar el token válido.
+        // Las consultas protegidas mostrarán su error sin inventar una sesión nueva.
+      })
+      .finally(() => { if (!cancelado) setValidandoSesion(false); });
+    return () => { cancelado = true; };
+  }, []);
+
+  // Mantener la sección actual de la pestaña al recargar con el navegador.
+  useEffect(() => {
+    if (sesion && !validandoSesion) guardarPaginaEnPestana(pagina);
+  }, [sesion, pagina, validandoSesion]);
+
   const esAdmin = sesion?.usuario.roles.includes('ADMIN_GENERAL') ?? false;
   const esJefe = sesion?.usuario.roles.includes('JEFE_AREA') ?? false;
   const autorizado = esAdmin || esJefe;
@@ -127,16 +167,14 @@ export default function App() {
 
   function manejarError(e: unknown) {
     if (e instanceof ApiError && e.status === 401) {
-      setSesion(null);
-      setDetalle(null);
-      setError('');
+      cerrarSesion();
       return;
     }
     setError(e instanceof Error ? e.message : 'Error de comunicación');
   }
 
   useEffect(() => {
-    if (!sesion || !autorizado) return;
+    if (!sesion || !autorizado || validandoSesion) return;
     let cancelar = false;
     setCargando(true);
     setError('');
@@ -153,17 +191,17 @@ export default function App() {
     return () => { cancelar = true; };
     // La sesión y la versión son los únicos disparadores de la carga general.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, version, autorizado]);
+  }, [token, version, autorizado, validandoSesion]);
 
   useEffect(() => {
-    if (!sesion || !autorizado || !filtro) { setFiltrados(null); return; }
+    if (!sesion || !autorizado || validandoSesion || !filtro) { setFiltrados(null); return; }
     let cancelar = false;
     requestApi<{ empleados: Empleado[] }>('/api/empleados?departamento_id=' + encodeURIComponent(filtro), token)
       .then(r => { if (!cancelar) { setFiltrados(r.empleados); setError(''); } })
       .catch(e => { if (!cancelar) manejarError(e); });
     return () => { cancelar = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtro, token, version, autorizado]);
+  }, [filtro, token, version, autorizado, validandoSesion]);
 
   const listado = useMemo(() => {
     const needle = busqueda.trim().toLocaleLowerCase('es');
@@ -316,13 +354,26 @@ export default function App() {
   }, [menuMovilAbierto]);
 
   function cerrarSesion() {
+    borrarSesionDePestana();
     setMenuMovilAbierto(false);
     setSesion(null); setDetalle(null); setDetalleArea(null);
     setMostrarNuevoEmpleado(false); setMensajeEmpleado('');
     setDepartamentos([]); setEmpleados([]); setPagina('resumen'); setFiltro(''); setBusqueda('');
   }
 
-  if (!sesion) return <PantallaLogin onLogin={s => { setSesion(s); setPagina('resumen'); }} />;
+  if (validandoSesion) return (
+    <div className="session-validation" role="status" aria-live="polite">
+      <div className="session-validation-mark" aria-hidden="true">✚</div>
+      <strong>SIGPMAT</strong>
+      <span>Verificando tu sesión segura…</span>
+    </div>
+  );
+
+  if (!sesion) return <PantallaLogin onLogin={s => {
+    guardarSesionEnPestana(s);
+    setSesion(s);
+    setPagina('resumen');
+  }} />;
 
   const iniciales = sesion.usuario.nombre_usuario.slice(0, 2).toUpperCase();
   const etiquetas: Record<Pagina, string> = { resumen: 'Panel principal', empleados: 'Personal hospitalario', departamentos: 'Departamentos', turnos: 'Turnos y cobertura' };
@@ -384,13 +435,6 @@ export default function App() {
               <span>SIGPMAT</span>
               <h1>{etiquetas[pagina]}</h1>
             </div>
-            <button type="button" className="mobile-header-button" aria-label="Actualizar datos"
-              onClick={() => setVersion(v => v + 1)} disabled={cargando}>
-              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                <path d="M20 7v5h-5M4 17v-5h5" />
-                <path d="M5.5 9a7 7 0 0 1 12-2l2.5 5M18.5 15a7 7 0 0 1-12 2L4 12" />
-              </svg>
-            </button>
             <button type="button" className="mobile-profile-trigger" aria-label="Abrir perfil de usuario"
               aria-controls="sigpmat-menu" aria-expanded={menuMovilAbierto}
               onClick={evento => abrirMenuMovil('perfil', evento.currentTarget)}>
@@ -398,7 +442,7 @@ export default function App() {
             </button>
           </div>
           <div className="breadcrumbs">SIGPMAT <span>/</span> {etiquetas[pagina]}</div>
-          <div className="top-actions"><span className="live-dot" /><span className="top-status">Entorno local</span><button type="button" className="button ghost small" onClick={() => setVersion(v => v + 1)} disabled={cargando}>↻ Actualizar</button></div>
+          <div className="top-actions"><span className="live-dot" /><span className="top-status">Conectado a SIGPMAT</span></div>
         </header>
 
         <div className="content">
