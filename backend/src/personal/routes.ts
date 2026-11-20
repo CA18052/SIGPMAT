@@ -72,11 +72,12 @@ async function comprobarVisualizacion(
   const usuario = await autorizar(request, reply);
   if (!usuario) return null;
   const admin = usuario.roles.includes('ADMIN_GENERAL');
-  if (!admin && !usuario.roles.includes('JEFE_AREA')) {
+  if (!admin && !usuario.roles.includes('JEFE_AREA') &&
+      !usuario.roles.includes('VISITANTE_LECTURA')) {
     reply.code(403).send({ error: 'Acceso no autorizado' });
     return null;
   }
-  if (admin) return true;
+  if (admin || usuario.roles.includes('VISITANTE_LECTURA')) return true;
   const resultado = await pool.query<{ autorizado: boolean }>(
     `SELECT EXISTS (
        SELECT 1 FROM sigpmat.empleados e
@@ -211,7 +212,7 @@ export function registrarRutasPersonalV05(app: FastifyInstance): void {
     reply.header('Cache-Control','no-store');
     const usuario = await autorizar(request, reply);
     if (!usuario) return reply;
-    if (!usuario.roles.some(r => r === 'ADMIN_GENERAL' || r === 'JEFE_AREA')) {
+    if (!usuario.roles.some(r => r === 'ADMIN_GENERAL' || r === 'JEFE_AREA' || r === 'VISITANTE_LECTURA')) {
       return reply.code(403).send({ error: 'Acceso no autorizado' });
     }
     const { rows } = await pool.query(
