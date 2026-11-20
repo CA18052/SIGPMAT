@@ -7,6 +7,7 @@ type DeptRow = {
   codigo: string;
   nombre: string;
   ubicacion?: string | null;
+  extension?: string | null;
   empleados_activos?: number;
 };
 type DeptParams = { id: string };
@@ -74,7 +75,7 @@ export function registrarRutasDepartamentos(app: FastifyInstance): void {
     if (!auth) return reply;
 
     const { rows } = await pool.query<DeptRow>(
-      `SELECT d.id_departamento::text, d.codigo, d.nombre, d.ubicacion,
+      `SELECT d.id_departamento::text, d.codigo, d.nombre, d.ubicacion, d.extension,
                 (SELECT count(DISTINCT e.id_empleado)::integer
                    FROM sigpmat.empleado_departamento ed
                    JOIN sigpmat.empleados e ON e.id_empleado=ed.id_empleado
