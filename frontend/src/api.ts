@@ -15,6 +15,8 @@ export interface Departamento {
   id_departamento: string;
   codigo: string;
   nombre: string;
+  ubicacion?: string | null;
+  empleados_activos?: number;
 }
 
 export interface Empleado {
