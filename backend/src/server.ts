@@ -13,6 +13,7 @@ import { registrarRutasEmpleados } from './empleados/routes.js';
 import { registrarRutasPersonalV05 } from './personal/routes.js';
 import { registrarRutasTurnos } from './turnos/routes.js';
 import { registrarCrudGestion } from './gestion/crud.js';
+import { registrarRutasUsuarios } from './usuarios/routes.js';
 
 const jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret || !/^[0-9a-f]{96}$/.test(jwtSecret)) {
@@ -63,6 +64,7 @@ registrarRutasEmpleados(app);
 registrarRutasPersonalV05(app);
 registrarRutasTurnos(app);
 registrarCrudGestion(app);
+registrarRutasUsuarios(app);
 
 // En Render, Fastify entrega también los archivos compilados de React.
 // En desarrollo, Vite sigue funcionando de forma independiente en el puerto 5173.
