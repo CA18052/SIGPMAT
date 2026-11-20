@@ -50,6 +50,18 @@ La prueba formal del comportamiento de concurrencia y las pruebas manuales compl
 - La caja de búsqueda puntual por código, nombres, apellidos o cargo se aplica al resultado de los filtros.
 - Las consultas de un jefe de área siguen sujetas al alcance de su departamento; no se amplían sus permisos.
 
+## Verificaciones técnicas ejecutadas en rama Neon de ensayo
+
+Consultas realizadas sobre `ensayo-paquete06` sin modificar las cuentas de producción:
+
+- **26 tablas** en el esquema (24 originales + dos tablas nuevas).
+- El rol `VISITANTE_LECTURA` existe una sola vez.
+- La cuenta original sigue siendo el único superadministrador; no se crearon cuentas públicas.
+- `sigpmat_app` posee `INSERT` sobre auditoría y `UPDATE` sobre confirmaciones.
+- La restricción de `tipo_cuenta` admite `visitante`.
+- Simulación SQL de un comprobante sintético: la primera actualización de consumo devolvió **1 registro**; la segunda utilización devolvió **0**; intentar consumirlo con una ruta distinta devolvió **0**. Esto comprueba la condición SQL de uso único, **no sustituye una prueba de integración HTTP**.
+- Frontend y backend: se exige aprobación de GitHub Actions para integrar.
+
 ## Migración y despliegue
 
 **IMPORTANTE: Render es 100 % manual por decisión del propietario. No iniciar deploy mediante herramientas.**
