@@ -19,8 +19,14 @@ type Pagina = 'resumen' | 'empleados' | 'departamentos' | 'turnos';
 type Detalle = { empleado: EmpleadoDetalle; especialidades: Acreditacion[] };
 type ListaDepartamento = { departamento: Departamento; empleados: Empleado[] };
 
-function ErrorMessage({ text }: { text: string }) {
-  return <div role="alert" className="alert"><span aria-hidden="true">!</span>{text}</div>;
+function ErrorMessage({ text, motivo, solucion }: {
+  text: string; motivo?: string; solucion?: string
+}) {
+  return <div role="alert" className="alert crud-error-detail">
+    <strong>{text}</strong>
+    {motivo && <p><b>¿Por qué?</b> {motivo}</p>}
+    {solucion && <p><b>¿Cómo solucionarlo?</b> {solucion}</p>}
+  </div>;
 }
 
 function Entrada({ label, value, onChange, type = 'text', placeholder, autoComplete }:
@@ -101,6 +107,7 @@ export default function App() {
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
+  const [errorDetalle, setErrorDetalle] = useState<{ motivo?: string; solucion?: string } | null>(null);
   const [version, setVersion] = useState(0);
   const [detalle, setDetalle] = useState<Detalle | null>(null);
   const [detalleArea, setDetalleArea] = useState<ListaDepartamento | null>(null);
@@ -170,8 +177,14 @@ export default function App() {
       cerrarSesion();
       return;
     }
+    setErrorDetalle(e instanceof ApiError
+      ? { motivo: e.motivo, solucion: e.solucion } : null);
     setError(e instanceof Error ? e.message : 'Error de comunicación');
   }
+
+  useEffect(() => {
+    if (!error) setErrorDetalle(null);
+  }, [error]);
 
   useEffect(() => {
     if (!sesion || !autorizado || validandoSesion) return;
@@ -452,7 +465,8 @@ export default function App() {
             <div className="date-pill">◷ <span>Datos consultados en PostgreSQL</span></div>
           </div>
 
-          {error && <ErrorMessage text={error} />}
+          {error && <ErrorMessage text={error}
+            motivo={errorDetalle?.motivo} solucion={errorDetalle?.solucion}/>}
           {!autorizado ? <div className="empty"><h2>Acceso limitado</h2><p>Este perfil no cuenta todavía con módulos de consulta habilitados. La API mantiene sus permisos de acceso.</p></div> :
           pagina === 'resumen' ? (
             <>
@@ -588,7 +602,8 @@ export default function App() {
 
       {(detalle || detalleArea) && <div className="overlay" role="presentation" onMouseDown={e => { if (e.currentTarget === e.target) {setDetalle(null);setDetalleArea(null);} }}>
         <section role="dialog" aria-modal="true" aria-label={detalle ? 'Detalle del empleado' : 'Detalle del departamento'} className="drawer">
-          {error && <div className="alert" role="alert">{error}</div>}
+          {error && <ErrorMessage text={error}
+            motivo={errorDetalle?.motivo} solucion={errorDetalle?.solucion}/>}
           <div className="drawer-header"><span className="eyebrow">DETALLE DE REGISTRO</span><button type="button" className="icon-btn" aria-label="Cerrar detalle" onClick={() => {setDetalle(null);setDetalleArea(null);}}>✕</button></div>
           {detalle ? <>
             <div className="drawer-title"><AvatarEmpleado empleado={detalle.empleado} size="grande"/><div><h2>{detalle.empleado.nombres} {detalle.empleado.apellidos}</h2><p>{detalle.empleado.codigo_empleado}</p></div></div>
