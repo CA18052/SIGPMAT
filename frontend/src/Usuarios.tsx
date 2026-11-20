@@ -17,7 +17,7 @@ type Cuenta = {
 };
 type Creada = { usuario: Cuenta; contrasena_temporal?: string; aviso: string };
 const tipoLabel = (tipo:string) => tipo==='integrante'?'Integrante del equipo':
-  tipo==='docente'?'Docente evaluador':'Cuenta de demostración';
+  tipo==='docente'?'Docente evaluador':tipo==='visitante'?'Visitante · Solo lectura':'Cuenta de demostración';
 
 export default function Usuarios({
   token, onSesionExpirada
@@ -188,7 +188,7 @@ export default function Usuarios({
           <p>Podrás utilizar tu carnet para iniciar sesión y conservarás el privilegio exclusivo de superadministrador. Por seguridad, debes confirmar tu contraseña actual. Después tendrás que entrar con el nuevo usuario.</p>
         </div>
         <label>Mi carnet universitario
-          <input required minLength={6} maxLength={20} pattern="[A-Za-z]{2,4}[0-9]{4,8}"
+          <input required minLength={6} maxLength={7} pattern="[A-Za-z]{2}[0-9]{5}"
             value={miCarnet} placeholder="AB12345" autoComplete="off"
             onChange={e=>setMiCarnet(e.target.value)} disabled={!!procesando}/>
         </label>
