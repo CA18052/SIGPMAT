@@ -14,6 +14,7 @@ import { registrarRutasPersonalV05 } from './personal/routes.js';
 import { registrarRutasTurnos } from './turnos/routes.js';
 import { registrarCrudGestion } from './gestion/crud.js';
 import { registrarRutasUsuarios } from './usuarios/routes.js';
+import { registrarSeguridadOperaciones } from './seguridad/routes.js';
 
 const jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret || !/^[0-9a-f]{96}$/.test(jwtSecret)) {
@@ -58,6 +59,7 @@ app.get('/api/health/db', async (request, reply) => {
   }
 });
 
+registrarSeguridadOperaciones(app);
 registrarRutasAutenticacion(app);
 registrarRutasDepartamentos(app);
 registrarRutasEmpleados(app);
