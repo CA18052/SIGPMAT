@@ -44,10 +44,10 @@ app.get('/api/health/db', async (request, reply) => {
       WHERE table_schema = 'sigpmat' AND table_type = 'BASE TABLE'
     `);
     const totalTablas = result.rows[0]?.total_tablas ?? 0;
-    if (totalTablas !== 24) {
+    if (totalTablas !== 26) {
       return reply.code(503).send({
         status: 'degraded', database: 'connected',
-        expectedTables: 24, actualTables: totalTablas
+        expectedTables: 26, actualTables: totalTablas
       });
     }
     return {
