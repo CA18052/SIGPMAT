@@ -80,27 +80,82 @@ export function registrarRutasTurnos(app: FastifyInstance): void {
     return { cargos: rows };
   });
 
-  app.get('/api/turnos', async (request, reply) => {
+  // La búsqueda se ejecuta en PostgreSQL ANTES de LIMIT 100 para
+  // encontrar a profesionales asignados también fuera de la primera página.
+  // Siempre se filtra por departamentos permitidos al rol autenticado.
+  app.get<{ Querystring: { q?: string } }>('/api/turnos', {
+    schema: {
+      querystring: {
+        type: 'object', additionalProperties: false,
+        properties: { q: { type: 'string', maxLength: 80 } }
+      }
+    }
+  }, async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
     const usuario = await cuentaOperativa(request, reply);
     if (!usuario) return reply;
-    const sql =
-      "SELECT t.id_turno::text, t.id_departamento::text, d.nombre AS departamento, " +
-      "t.tipo_turno, t.inicio_at, t.fin_at, t.estado, " +
-      "COALESCE((SELECT SUM(r.cupos_requeridos) FROM sigpmat.requerimientos_turno r WHERE r.id_turno=t.id_turno),0)::integer AS cupos_requeridos, " +
-      "COALESCE((SELECT COUNT(*) FROM sigpmat.asignaciones_turno a JOIN sigpmat.requerimientos_turno r ON r.id_requerimiento=a.id_requerimiento " +
-      "WHERE r.id_turno=t.id_turno AND a.estado IN ('asignada','confirmada')),0)::integer AS cupos_ocupados " +
-      "FROM sigpmat.turnos t JOIN sigpmat.departamentos d ON d.id_departamento=t.id_departamento " +
-      "WHERE ($1::boolean OR EXISTS (SELECT 1 FROM sigpmat.usuarios u " +
-      "JOIN sigpmat.empleados e ON e.id_empleado=u.id_empleado " +
-      "JOIN sigpmat.empleado_departamento ed ON ed.id_empleado=e.id_empleado " +
-      "WHERE u.id_usuario=$2::bigint AND e.estado_vinculo='activo' AND ed.id_departamento=t.id_departamento " +
-      "AND ed.es_jefe=TRUE AND ed.fecha_inicio<=CURRENT_DATE AND (ed.fecha_fin IS NULL OR ed.fecha_fin>=CURRENT_DATE))) " +
-      "ORDER BY t.inicio_at DESC LIMIT 100";
+    const busqueda = (request.query.q || '').trim();
+    const sql = `
+      SELECT t.id_turno::text, t.id_departamento::text, d.nombre AS departamento,
+             t.tipo_turno, t.inicio_at, t.fin_at, t.estado,
+             COALESCE((SELECT SUM(r.cupos_requeridos)
+                       FROM sigpmat.requerimientos_turno r WHERE r.id_turno=t.id_turno),0)::integer AS cupos_requeridos,
+             COALESCE((SELECT COUNT(*)
+                       FROM sigpmat.asignaciones_turno a
+                       JOIN sigpmat.requerimientos_turno r ON r.id_requerimiento=a.id_requerimiento
+                       WHERE r.id_turno=t.id_turno AND a.estado IN ('asignada','confirmada')),0)::integer AS cupos_ocupados,
+             COALESCE((
+               SELECT json_agg(json_build_object(
+                 'id_empleado', e.id_empleado::text,
+                 'codigo_empleado', e.codigo_empleado,
+                 'nombre_completo', concat_ws(' ', e.nombres, e.apellidos)
+               ) ORDER BY e.apellidos, e.nombres)
+               FROM sigpmat.asignaciones_turno a
+               JOIN sigpmat.requerimientos_turno r ON r.id_requerimiento=a.id_requerimiento
+               JOIN sigpmat.empleados e ON e.id_empleado=a.id_empleado
+               WHERE r.id_turno=t.id_turno AND a.estado IN ('asignada','confirmada')
+             ), '[]'::json) AS personal_asignado
+      FROM sigpmat.turnos t
+      JOIN sigpmat.departamentos d ON d.id_departamento=t.id_departamento
+      WHERE (
+        $1::boolean OR EXISTS (
+          SELECT 1 FROM sigpmat.usuarios u
+          JOIN sigpmat.empleados e ON e.id_empleado=u.id_empleado
+          JOIN sigpmat.empleado_departamento ed ON ed.id_empleado=e.id_empleado
+          WHERE u.id_usuario=$2::bigint
+            AND e.estado_vinculo='activo' AND ed.id_departamento=t.id_departamento
+            AND ed.es_jefe=TRUE AND ed.fecha_inicio<=CURRENT_DATE
+            AND (ed.fecha_fin IS NULL OR ed.fecha_fin>=CURRENT_DATE)
+        )
+      )
+      AND (
+        $3::text='' OR
+        strpos(lower(t.id_turno::text),lower($3)) > 0 OR
+        strpos(lower(d.nombre),lower($3)) > 0 OR
+        strpos(lower(d.codigo),lower($3)) > 0 OR
+        strpos(lower(t.tipo_turno),lower($3)) > 0 OR
+        strpos(lower(t.estado),lower($3)) > 0 OR
+        strpos(to_char(t.inicio_at AT TIME ZONE 'America/El_Salvador','YYYY-MM-DD'),$3) > 0 OR
+        EXISTS (
+          SELECT 1 FROM sigpmat.asignaciones_turno a
+          JOIN sigpmat.requerimientos_turno r ON r.id_requerimiento=a.id_requerimiento
+          JOIN sigpmat.empleados e ON e.id_empleado=a.id_empleado
+          JOIN sigpmat.cargos c ON c.id_cargo=e.id_cargo
+          WHERE r.id_turno=t.id_turno AND a.estado IN ('asignada','confirmada')
+            AND (
+              strpos(lower(e.nombres || ' ' || e.apellidos),lower($3)) > 0 OR
+              strpos(lower(e.apellidos || ' ' || e.nombres),lower($3)) > 0 OR
+              strpos(lower(e.codigo_empleado),lower($3)) > 0 OR
+              strpos(lower(c.nombre),lower($3)) > 0
+            )
+        )
+      )
+      ORDER BY t.inicio_at DESC LIMIT 100
+    `;
     const { rows } = await pool.query(sql, [
-      usuario.roles.includes('ADMIN_GENERAL'), usuario.id_usuario
+      usuario.roles.includes('ADMIN_GENERAL'), usuario.id_usuario, busqueda
     ]);
-    return { turnos: rows, limite: 100 };
+    return { turnos: rows, limite: 100, busqueda };
   });
 
   app.get<{ Params: Params }>('/api/turnos/:id', { schema: { params: paramsSchema } },
