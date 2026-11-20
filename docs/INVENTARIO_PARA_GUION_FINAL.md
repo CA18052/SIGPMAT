@@ -39,11 +39,18 @@
 - **Paquete 07 — Pulido final:** retirar avisos de funcionalidades todavía no implementadas del panel y mensajes técnicos de los listados; utilizar ayudas contextuales y pie institucional `SIGMA · Universidad de El Salvador`.
 - **Demostración sugerida:** buscar «Lucía» en turnos, comprobar quién está asignado, buscar ID exacto, mostrar rechazo de eliminación de un registro con historial, recargar con el navegador y comprobar que conserva el acceso si el JWT no venció.
 
+## Paquete 05 — Cuentas individuales y evaluación
+
+- **Implementado en código (pendiente de despliegue y validación de accesos):** administrador exclusivo de cuentas, alta por carnet, cuentas de docente, passwords Argon2id generadas o manuales, primer cambio obligatorio, cierre de sesiones anteriores al cambiar/restablecer claves y bloqueo/habilitación.
+- **Superadministración:** la cuenta original puede actualizar su usuario a su propio carnet, previa verificación de contraseña, sin transferir privilegios.
+- **Demostración sugerida una vez desplegado y comprobado:** mostrar el módulo de usuarios como superadmin, crear cuenta temporal, iniciar sesión y cambiar contraseña, verificar que una cuenta operativa no accede a Usuarios.
+- **Pendiente de ejecución humana:** introducir los carnets reales, generar cuentas reales y del docente, entregar credenciales privadas, ejecutar pruebas de login y permisos desde el navegador. No afirmar que estas pruebas pasaron antes de obtener evidencia.
+- **No implementado todavía:** registro abierto por invitación de un solo uso; se mantiene cerrado para evitar altas administrativas públicas.
+
 ## Plan de funciones próximas: NO IMPLEMENTADAS
 
-- **Paquete 05:** cuentas individuales de los cinco integrantes, cuenta del docente, administración de usuarios, invitaciones y roles.
-- **Paquete 06:** reautenticación para operaciones sensibles, bitácora de auditoría exclusiva del superadministrador, controles adicionales de sesión.
-- **Paquete 07 — Render:** solucionar completamente la publicación automática, si la integración GitHub/Render lo permite; comprobarlo con un despliegue efectivamente marcado como automático.
+- **Paquete 06:** reautenticación para operaciones sensibles, bitácora exclusiva del superadministrador, controles adicionales de sesión.
+- **Paquete 07 — Render:** por decisión del propietario, los despliegues quedan bajo control **manual**; no se requiere automatizar su publicación.
 - **Paquete 08:** reportes avanzados y propuestas automáticas de cobertura.
 - **Paquete 09:** AURA, asistente de inteligencia artificial con información y permisos controlados por Fastify.
 
