@@ -25,6 +25,7 @@ No se ha usado como comprobante una supuesta rúbrica final no verificada. La gu
 | Render: publicación | **Live**, 20/11/2026 22:36:42 UTC | Render Deploys / Events |
 | GitHub CI frontend | **Aprobado** (React/Vite, TypeScript) | Commit `e263ba7` |
 | GitHub CI backend | **Aprobado** (TypeScript) | Commit `e263ba7` |
+| Smoke HTTP público | **12/12 aprobadas** el 20/11/2026 22:47 UTC | [GitHub Actions run 44831735338](https://github.com/CA18052/SIGPMAT/actions/runs/44831735338/job/136618084019) |
 | Render: auto-deploy configurado | `yes` / `checksPass` / rama `main` | Render Service Settings |
 | Render: disparadores últimos tres deploys | **Manual** | Historial real de Render |
 | Empleados en Neon | 65 | Consulta `SELECT COUNT(*)` |
@@ -62,7 +63,7 @@ Consultas **SELECT** realizadas sobre Neon `neondb`, rama principal. Todas las c
 - Workflow: `.github/workflows/smoke-publico.yml`.
 - Ejecuta **solo GET**, sin credenciales ni operaciones destructivas.
 - Comprueba disponibilidad de `/api/health`, interfaz `/`, imagen sintética y rechazo 401 de ocho rutas privadas, además de la separación entre API y SPA.
-- **Estado del resultado:** ver la ejecución concreta de GitHub Actions del pull request del Paquete 04. No declarar estas comprobaciones aprobadas hasta que se complete el workflow.
+- **Resultado observado:** **12 de 12 pruebas aprobadas**, 20/11/2026 22:47 UTC, job `136618084019` del run `44831735338`. La API y la interfaz devolvieron 200, la imagen JPEG devolvió 200, las ocho rutas privadas rechazaron solicitudes anónimas con 401 y una ruta de API inexistente devolvió 404. [Evidencia reproducible en GitHub Actions](https://github.com/CA18052/SIGPMAT/actions/runs/44831735338/job/136618084019).
 - El workflow puede lanzarse desde GitHub Actions `workflow_dispatch` para repetir el ensayo sin modificar la base.
 
 ## 3. Casos de prueba funcionales para la defensa (pendientes de evidencia)
@@ -197,7 +198,7 @@ La tabla siguiente cumple la estructura solicitada por la guía de la UES. **PEN
 - Infraestructura: GitHub `main` y Render Live corresponden al mismo commit — **verificado** al iniciar paquete.
 - Respaldo de la versión de demostración — **creado y verificado READY**.
 - Integridad básica de Neon: diez comprobaciones SQL sin anomalías — **verificado**.
-- HTTP público y denegación de rutas sin autenticación — **se automatiza y se reporta mediante GitHub Actions**.
+- HTTP público y denegación de rutas sin autenticación — **12/12 comprobaciones aprobadas en GitHub Actions**.
 - CRUD de tres módulos y rol jefe: pruebas funcionales con datos temporales y capturas — **pendiente de evidencia formal**.
 - Recuperación local y restauración de backup — **planificada, no ejecutada**.
 - Documentación y guion de defensa — ver documentos del Paquete 04 en `docs/`.
