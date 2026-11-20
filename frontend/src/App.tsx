@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import Turnos from './Turnos';
 import NuevoEmpleado from './NuevoEmpleado';
+import FormularioDepartamento from './FormularioDepartamento';
 import AvatarEmpleado from './AvatarEmpleado';
 import {
   ApiError, iniciarSesion, requestApi
@@ -105,6 +106,8 @@ export default function App() {
   const [guardando, setGuardando] = useState(false);
   const [mostrarNuevoEmpleado, setMostrarNuevoEmpleado] = useState(false);
   const [mensajeEmpleado, setMensajeEmpleado] = useState('');
+  const [formularioDepartamento, setFormularioDepartamento] = useState<Departamento | 'nuevo' | null>(null);
+  const [mensajeDepartamento, setMensajeDepartamento] = useState('');
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const menuRef = useRef<HTMLElement | null>(null);
   const botonCerrarMenuRef = useRef<HTMLButtonElement | null>(null);
@@ -196,6 +199,49 @@ export default function App() {
       });
       setEditando(false); setVersion(v => v + 1);
       await abrirEmpleado(detalle.empleado.id_empleado);
+    } catch (e) { manejarError(e); }
+    finally { setGuardando(false); }
+  }
+
+
+  async function eliminarEmpleado() {
+    if (!detalle || !esAdmin || guardando) return;
+    const e = detalle.empleado;
+    if (!window.confirm('¿Eliminar definitivamente a ' + e.nombres + ' ' + e.apellidos +
+      '? Solo se permite sin historial. Esta acción no puede deshacerse.')) return;
+    setGuardando(true); setError('');
+    try {
+      await requestApi('/api/empleados/' + encodeURIComponent(e.id_empleado), token, {method:'DELETE'});
+      setDetalle(null); setVersion(v => v + 1);
+      setMensajeEmpleado('Empleado ' + e.codigo_empleado + ' eliminado correctamente.');
+    } catch (e) { manejarError(e); }
+    finally { setGuardando(false); }
+  }
+
+  async function eliminarDepartamento(departamento: Departamento) {
+    if (!esAdmin || guardando) return;
+    if (!window.confirm('¿Eliminar definitivamente «' + departamento.nombre +
+      '»? Solo es posible sin empleados ni turnos relacionados.')) return;
+    setGuardando(true); setError('');
+    try {
+      await requestApi('/api/departamentos/' + encodeURIComponent(departamento.id_departamento),
+        token, {method:'DELETE'});
+      setDetalleArea(null); setVersion(v => v + 1);
+      setMensajeDepartamento('Departamento ' + departamento.nombre + ' eliminado.');
+    } catch (e) { manejarError(e); }
+    finally { setGuardando(false); }
+  }
+
+  async function desactivarDepartamento(departamento: Departamento) {
+    if (!esAdmin || guardando) return;
+    if (!window.confirm('¿Desactivar «' + departamento.nombre +
+      '»? No debe tener turnos abiertos futuros.')) return;
+    setGuardando(true); setError('');
+    try {
+      await requestApi('/api/departamentos/' + encodeURIComponent(departamento.id_departamento),
+        token, {method:'PATCH',body:JSON.stringify({activo:false})});
+      setDetalleArea(null); setVersion(v => v + 1);
+      setMensajeDepartamento('Departamento ' + departamento.nombre + ' desactivado.');
     } catch (e) { manejarError(e); }
     finally { setGuardando(false); }
   }
@@ -435,24 +481,54 @@ export default function App() {
           ) : pagina === 'turnos' ? (
             <Turnos token={token} departamentos={departamentos} onSesionExpirada={cerrarSesion} />
           ) : (
-            <div className="departments-grid">
-              {departamentos.map(d => <article className="department-card department-card-detailed" key={d.id_departamento}>
-                <div className="dept-card-top"><div className="dept-symbol">✚</div><span className="eyebrow">{d.codigo}</span></div>
-                <h2>{d.nombre}</h2><p className="dept-location">{d.ubicacion || 'Ubicación no definida'}</p>
-                <div className="dept-staff-count"><strong>{d.empleados_activos ?? '—'}</strong><span>empleados activos</span></div>
-                <button type="button" className="button secondary" onClick={() => abrirDepartamento(d.id_departamento)}>Consultar personal <span aria-hidden="true">→</span></button>
-              </article>)}
-              {departamentos.length === 0 && <div className="empty">No hay departamentos disponibles para este usuario.</div>}
+            <div className="department-section">
+              <div className="department-section-header">
+                <div><span className="eyebrow">ÁREAS HOSPITALARIAS</span><h2>Departamentos</h2>
+                  <p>{departamentos.length} departamentos visibles</p></div>
+                {esAdmin && <button className="button primary" type="button"
+                  onClick={() => {setError('');setFormularioDepartamento('nuevo');}}>+ Registrar departamento</button>}
+              </div>
+              {mensajeDepartamento && <p role="status" className="employee-success">{mensajeDepartamento}</p>}
+              <div className="departments-grid">
+                {departamentos.map(d => <article className="department-card department-card-detailed" key={d.id_departamento}>
+                  <div className="dept-card-top"><div className="dept-symbol">✚</div><span className="eyebrow">{d.codigo}</span></div>
+                  <h2>{d.nombre}</h2><p className="dept-location">{d.ubicacion || 'Ubicación no definida'}</p>
+                  <div className="dept-staff-count"><strong>{d.empleados_activos ?? '—'}</strong><span>empleados activos</span></div>
+                  <button type="button" className="button secondary" onClick={() => abrirDepartamento(d.id_departamento)}>
+                    Consultar personal <span aria-hidden="true">→</span>
+                  </button>
+                  {esAdmin && <div className="dept-management-buttons">
+                    <button type="button" className="button ghost small"
+                      onClick={() => {setError('');setFormularioDepartamento(d);}}>Editar</button>
+                    <button type="button" className="button ghost small" disabled={guardando}
+                      onClick={() => desactivarDepartamento(d)}>Desactivar</button>
+                    <button type="button" className="button ghost small dangerous" disabled={guardando}
+                      onClick={() => eliminarDepartamento(d)}>Eliminar</button>
+                  </div>}
+                </article>)}
+                {departamentos.length === 0 && <div className="empty">No hay departamentos disponibles para este usuario.</div>}
+              </div>
             </div>
           )}
           <footer className="footer">SIGPMAT · Universidad de El Salvador · Proyecto académico 2026 <span>Demostración académica · Datos ficticios</span></footer>
         </div>
       </main>
 
+      {esAdmin && formularioDepartamento !== null && <FormularioDepartamento
+        token={token} departamento={formularioDepartamento === 'nuevo' ? null : formularioDepartamento}
+        onCerrar={() => setFormularioDepartamento(null)}
+        onSesionExpirada={cerrarSesion}
+        onGuardado={() => {
+          const accion = formularioDepartamento === 'nuevo' ? 'registrado' : 'actualizado';
+          setFormularioDepartamento(null); setVersion(v => v + 1);
+          setMensajeDepartamento('Departamento ' + accion + ' correctamente.');
+        }}/>
+      }
       {esAdmin && mostrarNuevoEmpleado && <NuevoEmpleado token={token} departamentos={departamentos} onCerrar={() => setMostrarNuevoEmpleado(false)} onSesionExpirada={cerrarSesion} onGuardado={(codigo) => { setMostrarNuevoEmpleado(false); setFiltro(''); setBusqueda(''); setVersion(v => v + 1); setMensajeEmpleado('Empleado ' + codigo + ' registrado correctamente.'); }} />}
 
       {(detalle || detalleArea) && <div className="overlay" role="presentation" onMouseDown={e => { if (e.currentTarget === e.target) {setDetalle(null);setDetalleArea(null);} }}>
         <section role="dialog" aria-modal="true" aria-label={detalle ? 'Detalle del empleado' : 'Detalle del departamento'} className="drawer">
+          {error && <div className="alert" role="alert">{error}</div>}
           <div className="drawer-header"><span className="eyebrow">DETALLE DE REGISTRO</span><button type="button" className="icon-btn" aria-label="Cerrar detalle" onClick={() => {setDetalle(null);setDetalleArea(null);}}>✕</button></div>
           {detalle ? <>
             <div className="drawer-title"><AvatarEmpleado empleado={detalle.empleado} size="grande"/><div><h2>{detalle.empleado.nombres} {detalle.empleado.apellidos}</h2><p>{detalle.empleado.codigo_empleado}</p></div></div>
@@ -471,7 +547,10 @@ export default function App() {
             <h3>Especialidades acreditadas</h3>
             {detalle.especialidades.length ? <div className="specialties">{detalle.especialidades.map(a => <div key={a.id_empleado_especialidad} className="specialty"><strong>{a.nombre}</strong><span>{a.codigo} · Desde {a.vigente_desde}{a.vigente_hasta ? ' hasta ' + a.vigente_hasta : ''}</span></div>)}</div> : <p className="muted">Sin acreditaciones registradas.</p>}
             {esAdmin && <><div className="divider"/><button type="button" className="button secondary" onClick={() => setEditando(!editando)}>{editando ? 'Cancelar edición' : 'Editar datos y estado'}</button>
-              {editando && <form onSubmit={guardarEmpleado} className="edit-form"><Entrada label="Nombres" value={nombres} onChange={setNombres}/><Entrada label="Apellidos" value={apellidos} onChange={setApellidos}/><label className="field"><span>Estado laboral</span><select value={estadoEdicion} onChange={e => setEstadoEdicion(e.target.value as 'activo'|'suspendido'|'inactivo')}><option value="activo">Activo</option><option value="suspendido">Suspendido</option><option value="inactivo">Inactivo</option></select></label><p className="edit-note">No se puede suspender a un empleado con cuenta vinculada ni con asignaciones activas.</p><button className="button primary" type="submit" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar cambios'}</button></form>}</>}
+              {editando && <form onSubmit={guardarEmpleado} className="edit-form"><Entrada label="Nombres" value={nombres} onChange={setNombres}/><Entrada label="Apellidos" value={apellidos} onChange={setApellidos}/><label className="field"><span>Estado laboral</span><select value={estadoEdicion} onChange={e => setEstadoEdicion(e.target.value as 'activo'|'suspendido'|'inactivo')}><option value="activo">Activo</option><option value="suspendido">Suspendido</option><option value="inactivo">Inactivo</option></select></label><p className="edit-note">No se puede suspender a un empleado con cuenta vinculada ni con asignaciones activas.</p><button className="button primary" type="submit" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar cambios'}</button></form>}
+               <button type="button" className="button ghost dangerous employee-delete-action"
+                 disabled={guardando} onClick={eliminarEmpleado}>Eliminar empleado</button>
+             </>}
           </> : detalleArea ? <>
             <div className="drawer-title"><div className="big-avatar">✚</div><div><h2>{detalleArea.departamento.nombre}</h2><p>{detalleArea.departamento.codigo}</p></div></div>
             <h3>Personal adscrito actualmente</h3>
