@@ -166,7 +166,7 @@ export function registrarRutasEmpleados(app: FastifyInstance): void {
         `SELECT e.id_empleado::text, e.codigo_empleado, e.nombres, e.apellidos,
                 c.nombre AS cargo, e.estado_vinculo, e.foto_url,
                 CASE WHEN e.foto_bytes IS NULL THEN NULL
-                     ELSE 'data:' || e.foto_mime || ';base64,' || encode(e.foto_bytes, 'base64')
+                     ELSE 'data:' || e.foto_mime || ';base64,' || translate(encode(e.foto_bytes, 'base64'), chr(10) || chr(13), '')
                 END AS foto_data_url
            FROM sigpmat.empleados e
            JOIN sigpmat.cargos c ON c.id_cargo = e.id_cargo
@@ -237,7 +237,7 @@ export function registrarRutasEmpleados(app: FastifyInstance): void {
                 CASE WHEN $2::boolean THEN e.numero_registro_profesional ELSE NULL END AS numero_registro_profesional,
                 e.foto_url,
                 CASE WHEN e.foto_bytes IS NULL THEN NULL
-                     ELSE 'data:' || e.foto_mime || ';base64,' || encode(e.foto_bytes, 'base64')
+                     ELSE 'data:' || e.foto_mime || ';base64,' || translate(encode(e.foto_bytes, 'base64'), chr(10) || chr(13), '')
                 END AS foto_data_url
            FROM sigpmat.empleados e
            JOIN sigpmat.cargos c ON c.id_cargo = e.id_cargo
