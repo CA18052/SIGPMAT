@@ -72,15 +72,16 @@ async function cuentaAutorizada(request: FastifyRequest, reply: FastifyReply) {
   if (!cuenta) return null;
   const admin = cuenta.roles.includes('ADMIN_GENERAL');
   const jefe = cuenta.roles.includes('JEFE_AREA');
-  if (!admin && !jefe) {
+  const lectura = cuenta.roles.includes('VISITANTE_LECTURA');
+  if (!admin && !jefe && !lectura) {
     reply.code(403).send({ error: 'Acceso no autorizado' });
     return null;
   }
-  return { cuenta, admin, jefe };
+  return { cuenta, admin, jefe, lectura };
 }
 
 async function puedeVerDepartamento(cuenta: Cuenta, idDepto: string) {
-  if (cuenta.roles.includes('ADMIN_GENERAL')) return true;
+  if (cuenta.roles.includes('ADMIN_GENERAL') || cuenta.roles.includes('VISITANTE_LECTURA')) return true;
   const { rows } = await pool.query<{ autorizado: boolean }>(
     `SELECT EXISTS (
        SELECT 1
@@ -102,7 +103,7 @@ async function puedeVerDepartamento(cuenta: Cuenta, idDepto: string) {
 }
 
 async function esEmpleadoVisible(cuenta: Cuenta, idEmpleado: string): Promise<boolean> {
-  if (cuenta.roles.includes('ADMIN_GENERAL')) return true;
+  if (cuenta.roles.includes('ADMIN_GENERAL') || cuenta.roles.includes('VISITANTE_LECTURA')) return true;
   const { rows } = await pool.query<{ autorizado: boolean }>(
     `SELECT EXISTS (
        SELECT 1
@@ -207,7 +208,7 @@ export function registrarRutasEmpleados(app: FastifyInstance): void {
                 )
           ORDER BY e.codigo_empleado, e.id_empleado
           LIMIT 100`,
-        [idDepto ?? null, auth.admin, auth.cuenta.id_usuario]
+        [idDepto ?? null, auth.admin || auth.lectura, auth.cuenta.id_usuario]
       );
       return { empleados: rows, limite: 100 };
     }
@@ -270,7 +271,7 @@ export function registrarRutasEmpleados(app: FastifyInstance): void {
               )
             )
           ORDER BY d.codigo`,
-        [id, auth.admin, auth.cuenta.id_usuario]
+        [id, auth.admin || auth.lectura, auth.cuenta.id_usuario]
       );
       const empleado: EmpleadoDetalle = { ...rows[0], departamentos };
       return { empleado };
