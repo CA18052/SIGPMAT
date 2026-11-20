@@ -45,6 +45,50 @@ async function soloSuperadministrador(
 }
 
 export function registrarRutasUsuarios(app:FastifyInstance) {
+  // El propietario puede usar su carnet como login sin crear un segundo
+  // superadministrador ni trasladar privilegios a otra cuenta.
+  app.patch<{Body:{nuevo_usuario:string;nombre_mostrado:string;contrasena_actual:string}}>(
+    '/api/admin/usuarios/mi-identidad',{
+      config:{rateLimit:{max:5,timeWindow:'1 minute'}},
+      schema:{body:{type:'object',additionalProperties:false,
+        required:['nuevo_usuario','nombre_mostrado','contrasena_actual'],
+        properties:{
+          nuevo_usuario:{type:'string',minLength:6,maxLength:20,pattern:'^[A-Za-z]{2,4}[0-9]{4,8}$'},
+          nombre_mostrado:{type:'string',minLength:3,maxLength:120},
+          contrasena_actual:{type:'string',minLength:1,maxLength:128}
+        }}}
+    },async(request,reply)=>{
+      reply.header('Cache-Control','no-store');
+      const admin=await soloSuperadministrador(request,reply);
+      if(!admin)return reply;
+      const nuevo=request.body.nuevo_usuario.trim().toUpperCase();
+      const nombre=request.body.nombre_mostrado.trim();
+      if(!/^[A-Z]{2,4}[0-9]{4,8}$/.test(nuevo)||nombre.length<3)
+        return reply.code(400).send({error:'Verifica el carnet y el nombre completo.'});
+      const {rows}=await pool.query<{contrasena_hash:string}>(
+        'SELECT contrasena_hash FROM sigpmat.usuarios WHERE id_usuario=$1::bigint AND es_superadministrador=TRUE',
+        [admin.id_usuario]);
+      const vieja=rows[0]?.contrasena_hash;
+      if(!vieja)return reply.code(403).send({error:'Cuenta de superadministrador no disponible.'});
+      if(!await argon2.verify(vieja,request.body.contrasena_actual).catch(()=>false))
+        return reply.code(401).send({error:'Contraseña actual incorrecta.'});
+      try {
+        const result=await pool.query(
+          `UPDATE sigpmat.usuarios SET nombre_usuario=$2,nombre_mostrado=$3,
+             tipo_cuenta='integrante',sesion_version=sesion_version+1
+            WHERE id_usuario=$1::bigint AND es_superadministrador=TRUE
+              AND contrasena_hash=$4 RETURNING id_usuario`,
+          [admin.id_usuario,nuevo,nombre,vieja]);
+        if(!result.rowCount)return reply.code(409).send({error:'La cuenta cambió durante la operación.'});
+        return {actualizado:true,nuevo_usuario:nuevo,mensaje:'Identidad actualizada. Inicia sesión utilizando tu carnet.'};
+      }catch(e){
+        if((e as {code?:string}).code==='23505')return reply.code(409).send({error:'Ese carnet ya pertenece a otra cuenta.'});
+        request.log.error({err:e},'Error de cambio de carnet');
+        return reply.code(500).send({error:'No se pudo actualizar tu carnet.'});
+      }
+    }
+  );
+
   app.get('/api/admin/usuarios',async(request,reply)=>{
     reply.header('Cache-Control','no-store');
     const u=await soloSuperadministrador(request,reply);
