@@ -2,7 +2,7 @@
 
 ## Alcance implementado
 
-- Cuenta original `admin.demo`: **único superadministrador** del sistema. Los demás administradores no pueden crear usuarios, bloquear cuentas, restablecer claves ni acceder a la futura auditoría global.
+- Cuenta original `admin.demo`: **único superadministrador** del sistema. Puede cambiar su identificador a su carnet UES desde **Usuarios → Usar mi carnet como usuario**, confirmando su contraseña, sin perder los permisos. Los demás administradores no pueden crear usuarios, bloquear cuentas, restablecer claves ni acceder a la futura auditoría global.
 - Cuentas de **integrantes**: se identifican por carnet UES; el administrador introduce el número real, sin inventarlo. Patrón orientativo aceptado: 2–4 letras y 4–8 dígitos (por ejemplo, `AB12345`). No se deben publicar carnets ni credenciales en un repositorio público.
 - Cuenta de **docente evaluador**: nombre de usuario definido por el equipo, con el rol operativo `ADMIN_GENERAL` para explorar los módulos hospitalarios, **sin privilegio de superadministrador**.
 - Administración exclusiva de superadmin: alta, listado, bloqueo/habilitación y restablecimiento de claves; la cuenta superadmin no se puede bloquear ni restablecer desde ese panel.
@@ -20,7 +20,7 @@ No hay un endpoint público que conceda accesos administrativos a visitantes. La
 1. **Antes del backend:** crear respaldo de Neon, ejecutar `database/sql/18_cuentas_individuales.sql` en `neondb`, comprobar las columnas nuevas y que únicamente `admin.demo` tenga `es_superadministrador=TRUE`.
 2. Comprobar CI del pull request y fusionarlo en `main` solo cuando las pruebas aprueben.
 3. Render usa **despliegue manual por decisión del equipo**. Entrar al servicio en Render y ejecutar **Manual Deploy → Deploy latest commit** sobre el commit aprobado en `main`.
-4. Tras recibir `Live`, iniciar con `admin.demo`, abrir **Usuarios**, crear los cuatro integrantes restantes por sus carnets reales. La cuenta personal del superadmin será la quinta identidad operativa del equipo mientras así lo prefiera el propietario.
+4. Tras recibir `Live`, iniciar con `admin.demo` y abrir **Usuarios**. El propietario podrá primero cambiar su usuario a su carnet real mediante **Usar mi carnet como usuario**; esto revoca su sesión y exige nuevo login con el mismo password. Después creará las otras cuatro cuentas de integrantes con sus carnets auténticos. Así existirán cinco identidades personales y una superadministración exclusiva.
 5. Crear cuenta docente con usuario acordado, nombre visible y contraseña temporal. Entregar credenciales **en privado**; nunca incluir la contraseña administrativa en el PDF de entrega.
 6. Para cada cuenta creada, entrar y cambiar la contraseña obligatoriamente; cerrar sesión y entrar de nuevo. Probar que cada miembro puede operar módulos hospitalarios pero **no** administrar usuarios.
 7. Bloquear temporalmente una cuenta de ensayo y comprobar que pierde acceso; habilitarla desde `admin.demo`.
@@ -41,4 +41,4 @@ No hay un endpoint público que conceda accesos administrativos a visitantes. La
 
 Mostrar que cada integrante opera con identidad independiente, que el docente tiene credenciales propias, que la cuenta superadmin gestiona altas y accesos, que las claves se almacenan con Argon2id y que una sesión se revoca tras cambiar la contraseña. No compartir ninguna clave ni token en capturas o PDFs.
 
-**Estado:** módulo desarrollado en la rama de trabajo. La verificación de CI, migración a Neon main y publicación manual deben anotarse con su estado real al finalizar el paquete.
+**Estado:** módulo desarrollado y probado en CI en la rama de trabajo. La migración a Neon main y la publicación manual deben anotarse con su estado real al finalizar el paquete.
