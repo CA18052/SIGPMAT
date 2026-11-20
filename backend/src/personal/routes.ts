@@ -15,6 +15,11 @@ type PatchEmpleado = {
   nombres?: string; apellidos?: string;
   estado_vinculo?: 'activo' | 'suspendido' | 'inactivo';
   id_cargo?: string;
+  dui?: string | null;
+  correo_contacto?: string | null;
+  telefono?: string | null;
+  numero_registro_profesional?: string | null;
+  fecha_ingreso?: string | null;
 };
 type Acreditacion = {
   id_especialidad: string;
@@ -110,7 +115,12 @@ export function registrarRutasPersonalV05(app: FastifyInstance): void {
           nombres: { type: 'string', minLength: 1, maxLength: 90 },
           apellidos: { type: 'string', minLength: 1, maxLength: 90 },
           estado_vinculo: { type: 'string', enum: ['activo','suspendido','inactivo'] },
-          id_cargo: { type: 'string', pattern: BIGINT_PATTERN, maxLength: 19 }
+          id_cargo: { type: 'string', pattern: BIGINT_PATTERN, maxLength: 19 },
+          dui: { anyOf:[{type:'string',pattern:'^[0-9]{8}-[0-9]$',maxLength:10},{type:'null'}] },
+          correo_contacto: { anyOf:[{type:'string',minLength:3,maxLength:150},{type:'null'}] },
+          telefono: { anyOf:[{type:'string',pattern:'^[0-9]{4}-[0-9]{4}$',maxLength:9},{type:'null'}] },
+          numero_registro_profesional: { anyOf:[{type:'string',minLength:3,maxLength:40},{type:'null'}] },
+          fecha_ingreso: { anyOf:[formatoFecha,{type:'null'}] }
         }
       }
     } },
@@ -122,7 +132,11 @@ export function registrarRutasPersonalV05(app: FastifyInstance): void {
       if (!idValido(id) || (request.body.id_cargo && !idValido(request.body.id_cargo))) {
         return reply.code(400).send({ error: 'Identificador invalido' });
       }
-      const { nombres, apellidos, id_cargo, estado_vinculo } = request.body;
+      const { nombres, apellidos, id_cargo, estado_vinculo, dui, correo_contacto,
+        telefono, numero_registro_profesional, fecha_ingreso } = request.body;
+      if (fecha_ingreso && !fechaValida(fecha_ingreso)) {
+        return reply.code(400).send({error:'Fecha de ingreso inválida'});
+      }
       if (nombres !== undefined && !nombres.trim() || apellidos !== undefined && !apellidos.trim()) {
         return reply.code(400).send({ error: 'Nombres y apellidos no pueden estar vacios' });
       }
@@ -167,12 +181,22 @@ export function registrarRutasPersonalV05(app: FastifyInstance): void {
              nombres = COALESCE($2::varchar, nombres),
              apellidos = COALESCE($3::varchar, apellidos),
              id_cargo = COALESCE($4::bigint, id_cargo),
-             estado_vinculo = COALESCE($5::varchar, estado_vinculo)
+             estado_vinculo = COALESCE($5::varchar, estado_vinculo),
+             dui = CASE WHEN $6::boolean THEN $7::varchar ELSE dui END,
+             correo_contacto = CASE WHEN $8::boolean THEN $9::varchar ELSE correo_contacto END,
+             telefono = CASE WHEN $10::boolean THEN $11::varchar ELSE telefono END,
+             numero_registro_profesional = CASE WHEN $12::boolean THEN $13::varchar ELSE numero_registro_profesional END,
+             fecha_ingreso = CASE WHEN $14::boolean THEN $15::date ELSE fecha_ingreso END
            WHERE id_empleado=$1::bigint
            RETURNING id_empleado::text, codigo_empleado, nombres,
                      apellidos, id_cargo::text, estado_vinculo`,
           [id, nombres?.trim() ?? null, apellidos?.trim() ?? null,
-            id_cargo ?? null, estado_vinculo ?? null]
+            id_cargo ?? null, estado_vinculo ?? null,
+            dui !== undefined,dui ?? null,
+            correo_contacto !== undefined,correo_contacto?.trim() || null,
+            telefono !== undefined,telefono ?? null,
+            numero_registro_profesional !== undefined,numero_registro_profesional?.trim() || null,
+            fecha_ingreso !== undefined,fecha_ingreso ?? null]
         );
         await client.query('COMMIT');
         return { empleado: actualizado.rows[0] };

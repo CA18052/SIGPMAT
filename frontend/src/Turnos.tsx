@@ -52,9 +52,9 @@ function formInicial(): Formulario {
 }
 
 export default function Turnos({
-  token, departamentos, onSesionExpirada
+  token, departamentos, onSesionExpirada, esAdmin
 }: {
-  token: string; departamentos: Departamento[]; onSesionExpirada: () => void;
+  token: string; departamentos: Departamento[]; onSesionExpirada: () => void; esAdmin: boolean;
 }) {
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [cargos, setCargos] = useState<Cargo[]>([]);
@@ -65,6 +65,7 @@ export default function Turnos({
   const [mensaje, setMensaje] = useState('');
   const [formulario, setFormulario] = useState<Formulario>(formInicial);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [editandoTurnoId, setEditandoTurnoId] = useState<string | null>(null);
   const [detalle, setDetalle] = useState<DetalleTurno | null>(null);
   const [candidatos, setCandidatos] = useState<Empleado[]>([]);
   const [seleccion, setSeleccion] = useState('');
@@ -131,33 +132,70 @@ export default function Turnos({
       if (!Number.isFinite(inicio.getTime()) || !Number.isFinite(fin.getTime())) {
         throw new Error('Revisa las fechas del turno');
       }
-      const resultado = await requestApi<{ turno: { id_turno: string } }>(
-        '/api/turnos', token, {
-          method: 'POST',
-          body: JSON.stringify({
-            id_departamento: formulario.id_departamento,
-            id_cargo: formulario.id_cargo,
-            id_especialidad: formulario.id_especialidad || null,
-            tipo_turno: formulario.tipo_turno,
-            inicio_at: inicio.toISOString(),
-            fin_at: fin.toISOString(),
-            cupos_requeridos: Number(formulario.cupos_requeridos),
-            prioridad: formulario.prioridad
-          })
-        }
-      );
-      await cargarListado();
-      setMostrarFormulario(false);
-      setFormulario(formInicial());
-      setMensaje('Turno creado. Ahora puedes asignar personal.');
-      const nuevo = await requestApi<DetalleTurno>('/api/turnos/' + resultado.turno.id_turno,token);
-      setDetalle(nuevo);
-      const lista = await requestApi<{ empleados: Empleado[] }>(
-        '/api/empleados?departamento_id=' + nuevo.turno.id_departamento,token
-      );
-      setCandidatos(lista.empleados);
+      const payload = {
+        id_departamento: formulario.id_departamento,
+        id_cargo: formulario.id_cargo,
+        id_especialidad: formulario.id_especialidad || null,
+        tipo_turno: formulario.tipo_turno,
+        inicio_at: inicio.toISOString(),
+        fin_at: fin.toISOString(),
+        cupos_requeridos: Number(formulario.cupos_requeridos),
+        prioridad: formulario.prioridad
+      };
+      if (editandoTurnoId) {
+        await requestApi('/api/turnos/' + editandoTurnoId, token,
+          {method:'PATCH',body:JSON.stringify(payload)});
+        await cargarListado();
+        setMensaje('Turno actualizado correctamente.');
+        setMostrarFormulario(false);setEditandoTurnoId(null);setFormulario(formInicial());
+      } else {
+        const resultado = await requestApi<{ turno: { id_turno: string } }>(
+          '/api/turnos', token, {method:'POST',body:JSON.stringify(payload)});
+        await cargarListado();
+        setMostrarFormulario(false);setFormulario(formInicial());
+        setMensaje('Turno creado. Ahora puedes asignar personal.');
+        const nuevo = await requestApi<DetalleTurno>('/api/turnos/' + resultado.turno.id_turno,token);
+        setDetalle(nuevo);
+        const lista = await requestApi<{ empleados: Empleado[] }>(
+          '/api/empleados?departamento_id=' + nuevo.turno.id_departamento,token);
+        setCandidatos(lista.empleados);
+      }
     } catch (e) { errorApi(e); }
     finally { setProcesando(false); }
+  }
+
+  function editarTurno() {
+    if (!detalle || !esAdmin || procesando) return;
+    if (detalle.requerimientos.length !== 1) {
+      setError('Este turno contiene múltiples requerimientos; no admite edición desde este formulario.');
+      return;
+    }
+    const t=detalle.turno, r=detalle.requerimientos[0];
+    setFormulario({
+      id_departamento:t.id_departamento,id_cargo:r.id_cargo,
+      id_especialidad:r.id_especialidad || '',
+      tipo_turno:t.tipo_turno,
+      inicio_at:localFecha(new Date(t.inicio_at)),
+      fin_at:localFecha(new Date(t.fin_at)),
+      cupos_requeridos:String(r.cupos_requeridos),prioridad:r.prioridad
+    });
+    setEditandoTurnoId(t.id_turno);
+    setDetalle(null);setMostrarFormulario(true);
+    setError('');setMensaje('Editando turno #' + t.id_turno + '. Guarda en el formulario.');
+  }
+
+  async function eliminarTurno() {
+    if (!detalle || !esAdmin || procesando) return;
+    const id=detalle.turno.id_turno;
+    if (!window.confirm('¿Eliminar definitivamente el turno #' + id +
+      '? Solo si no tiene asignaciones o historial. No se puede deshacer.')) return;
+    setProcesando(true);setError('');setMensaje('');
+    try {
+      await requestApi('/api/turnos/' + id,token,{method:'DELETE'});
+      setDetalle(null);await cargarListado();
+      setMensaje('Turno #' + id + ' eliminado correctamente.');
+    }catch(e){errorApi(e);}
+    finally{setProcesando(false);}
   }
 
   async function asignar(requerimiento: Requerimiento) {
@@ -217,7 +255,11 @@ export default function Turnos({
           <h2>Calendario de turnos</h2>
           <p>Organiza los turnos, define los cupos y asigna personal por departamento.</p>
         </div>
-        <button type="button" className="button primary" onClick={() => { setMostrarFormulario(v => !v); setError(''); }}>
+        <button type="button" className="button primary" onClick={() => {
+          if(mostrarFormulario){setMostrarFormulario(false);setEditandoTurnoId(null);setFormulario(formInicial());}
+          else{setEditandoTurnoId(null);setFormulario(formInicial());setMostrarFormulario(true);}
+          setError('');
+        }}>
           {mostrarFormulario ? 'Cerrar formulario' : '+ Crear turno'}
         </button>
       </section>
@@ -234,7 +276,7 @@ export default function Turnos({
 
       {mostrarFormulario && <section className="panel shift-form-panel">
         <div className="eyebrow">NUEVO TURNO</div>
-        <h3>Programar cobertura</h3>
+        <h3>{editandoTurnoId ? 'Modificar turno #' + editandoTurnoId : 'Programar cobertura'}</h3>
         <form onSubmit={guardarTurno} className="shift-form">
           <label>Departamento
             <select required value={formulario.id_departamento} onChange={e=>setFormulario(f=>({...f,id_departamento:e.target.value}))}>
@@ -279,9 +321,9 @@ export default function Turnos({
           </label>
           <div className="shift-actions">
             <button className="button primary" type="submit" disabled={procesando}>
-              {procesando ? 'Guardando…' : 'Guardar turno'}
+              {procesando ? 'Guardando…' : editandoTurnoId ? 'Guardar cambios' : 'Guardar turno'}
             </button>
-            <p>Se crea un turno abierto con un requerimiento de cobertura.</p>
+            <p>{editandoTurnoId ? 'Solo se modifican turnos sin asignaciones históricas.' : 'Se crea un turno abierto con un requerimiento de cobertura.'}</p>
           </div>
         </form>
       </section>}
@@ -380,6 +422,13 @@ export default function Turnos({
             <div className="divider"/>
             <button type="button" className="button secondary" disabled={procesando} onClick={cancelarTurno}>Cancelar turno</button>
           </>}
+          {esAdmin && <div className="shift-crud-actions">
+            {detalle.turno.estado==='abierto' &&
+              <button type="button" className="button ghost" disabled={procesando}
+                onClick={editarTurno}>Editar turno</button>}
+            <button type="button" className="button ghost dangerous" disabled={procesando}
+              onClick={eliminarTurno}>Eliminar definitivamente</button>
+          </div>}
           {error && <div className="alert" role="alert">! {error}</div>}
           {mensaje && <div className="shift-success" role="status">✓ {mensaje}</div>}
         </section>

@@ -16,6 +16,7 @@ export interface Departamento {
   codigo: string;
   nombre: string;
   ubicacion?: string | null;
+  extension?: string | null;
   empleados_activos?: number;
 }
 

@@ -263,3 +263,28 @@
 @media(prefers-reduced-motion:reduce){
   .employee-avatar img,.employee-mobile-card,.shift-mobile-card{transition:none!important}
 }
+
+
+/* Paquete 03 - CRUD: acciones de administración con jerarquía clara */
+.department-section{display:grid;gap:17px}
+.department-section-header{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.department-section-header h2{font-size:24px;margin:5px 0 3px}
+.department-section-header p{font-size:13px;color:#837883;margin:0}
+.dept-management-buttons{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
+.dept-management-buttons .button{min-height:40px;flex:1;white-space:nowrap;justify-content:center;font-size:11px;padding:9px 10px}
+.dangerous{border-color:#e7c0c8!important;color:#a72d4c!important;background:#fff5f6!important}
+.dangerous:hover{background:#ffe7eb!important;border-color:#ce7187!important}
+.dangerous:focus-visible{outline:3px solid #b83553;outline-offset:3px}
+.employee-delete-action{margin-top:14px;min-height:44px}
+.shift-crud-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;padding-top:17px;border-top:1px solid #ece4e9}
+.shift-crud-actions .button{min-height:44px;justify-content:center}
+@media(max-width:760px){
+  .department-section-header{flex-direction:column;align-items:stretch}
+  .department-section-header .button{min-height:46px;width:100%;justify-content:center}
+  .dept-management-buttons .button{min-height:44px;font-size:12px}
+  .shift-crud-actions{flex-direction:column}
+  .shift-crud-actions .button{width:100%}
+}
+
+/* Retratos fotográficos de la demo, cuadrícula optimizada 4×4 */
+.employee-avatar .employee-avatar-portrait{position:absolute;inset:0;display:block;z-index:1;background-size:400% 400%;background-repeat:no-repeat;background-color:#e4e7ed}
