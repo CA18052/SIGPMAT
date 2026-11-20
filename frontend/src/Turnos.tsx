@@ -437,7 +437,7 @@ export default function Turnos({
           </div>}
           {(cargando || cargandoBusqueda) && <div className="employee-mobile-empty">Buscando turnos…</div>}
         </div>
-        <div className="table-footer">Hasta 100 turnos. Coberturas calculadas por PostgreSQL.</div>
+        <p className="shift-list-hint">Las asignaciones mostradas corresponden al personal vinculado a cada turno.</p>
       </section>
 
       {detalle && <div className="overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setDetalle(null);}}>
