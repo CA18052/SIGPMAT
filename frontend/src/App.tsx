@@ -103,6 +103,11 @@ export default function App() {
   const [nombres, setNombres] = useState('');
   const [apellidos, setApellidos] = useState('');
   const [estadoEdicion, setEstadoEdicion] = useState<'activo'|'suspendido'|'inactivo'>('activo');
+  const [duiEdicion, setDuiEdicion] = useState('');
+  const [telefonoEdicion, setTelefonoEdicion] = useState('');
+  const [correoEdicion, setCorreoEdicion] = useState('');
+  const [registroEdicion, setRegistroEdicion] = useState('');
+  const [ingresoEdicion, setIngresoEdicion] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [mostrarNuevoEmpleado, setMostrarNuevoEmpleado] = useState(false);
   const [mensajeEmpleado, setMensajeEmpleado] = useState('');
@@ -177,6 +182,11 @@ export default function App() {
       setDetalle({ empleado: e.empleado, especialidades: a.especialidades });
       setNombres(e.empleado.nombres); setApellidos(e.empleado.apellidos);
       setEstadoEdicion(e.empleado.estado_vinculo as 'activo'|'suspendido'|'inactivo');
+      setDuiEdicion(e.empleado.dui||'');
+      setTelefonoEdicion(e.empleado.telefono||'');
+      setCorreoEdicion(e.empleado.correo_contacto||'');
+      setRegistroEdicion(e.empleado.numero_registro_profesional||'');
+      setIngresoEdicion(e.empleado.fecha_ingreso||'');
     } catch (e) { manejarError(e); }
     finally { setCargando(false); }
   }
@@ -195,7 +205,13 @@ export default function App() {
     try {
       await requestApi('/api/empleados/' + detalle.empleado.id_empleado, token, {
         method: 'PATCH',
-        body: JSON.stringify({ nombres: nombres.trim(), apellidos: apellidos.trim(), estado_vinculo: estadoEdicion })
+        body: JSON.stringify({
+          nombres:nombres.trim(),apellidos:apellidos.trim(),estado_vinculo:estadoEdicion,
+          dui:duiEdicion||null,telefono:telefonoEdicion||null,
+          correo_contacto:correoEdicion.trim()||null,
+          numero_registro_profesional:registroEdicion.trim()||null,
+          fecha_ingreso:ingresoEdicion||null
+        })
       });
       setEditando(false); setVersion(v => v + 1);
       await abrirEmpleado(detalle.empleado.id_empleado);
@@ -547,7 +563,38 @@ export default function App() {
             <h3>Especialidades acreditadas</h3>
             {detalle.especialidades.length ? <div className="specialties">{detalle.especialidades.map(a => <div key={a.id_empleado_especialidad} className="specialty"><strong>{a.nombre}</strong><span>{a.codigo} · Desde {a.vigente_desde}{a.vigente_hasta ? ' hasta ' + a.vigente_hasta : ''}</span></div>)}</div> : <p className="muted">Sin acreditaciones registradas.</p>}
             {esAdmin && <><div className="divider"/><button type="button" className="button secondary" onClick={() => setEditando(!editando)}>{editando ? 'Cancelar edición' : 'Editar datos y estado'}</button>
-              {editando && <form onSubmit={guardarEmpleado} className="edit-form"><Entrada label="Nombres" value={nombres} onChange={setNombres}/><Entrada label="Apellidos" value={apellidos} onChange={setApellidos}/><label className="field"><span>Estado laboral</span><select value={estadoEdicion} onChange={e => setEstadoEdicion(e.target.value as 'activo'|'suspendido'|'inactivo')}><option value="activo">Activo</option><option value="suspendido">Suspendido</option><option value="inactivo">Inactivo</option></select></label><p className="edit-note">No se puede suspender a un empleado con cuenta vinculada ni con asignaciones activas.</p><button className="button primary" type="submit" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar cambios'}</button></form>}
+              {editando && <form onSubmit={guardarEmpleado} className="edit-form">
+                 <Entrada label="Nombres" value={nombres} onChange={setNombres}/>
+                 <Entrada label="Apellidos" value={apellidos} onChange={setApellidos}/>
+                 <label className="field"><span>DUI (opcional)</span>
+                   <input inputMode="numeric" pattern="[0-9]{8}-[0-9]" maxLength={10} placeholder="00000000-0"
+                     value={duiEdicion} onChange={e => setDuiEdicion(e.target.value)}/>
+                 </label>
+                 <label className="field"><span>Teléfono (opcional)</span>
+                   <input type="tel" pattern="[0-9]{4}-[0-9]{4}" maxLength={9} placeholder="0000-0000"
+                     value={telefonoEdicion} onChange={e => setTelefonoEdicion(e.target.value)}/>
+                 </label>
+                 <label className="field"><span>Correo de contacto (opcional)</span>
+                   <input type="email" maxLength={150} value={correoEdicion}
+                     onChange={e => setCorreoEdicion(e.target.value)}/>
+                 </label>
+                 <label className="field"><span>Registro profesional (opcional)</span>
+                   <input maxLength={40} value={registroEdicion}
+                     onChange={e => setRegistroEdicion(e.target.value)}/>
+                 </label>
+                 <label className="field"><span>Fecha de ingreso</span>
+                   <input type="date" value={ingresoEdicion} onChange={e => setIngresoEdicion(e.target.value)}/>
+                 </label>
+                 <label className="field"><span>Estado laboral</span>
+                   <select value={estadoEdicion} onChange={e=>setEstadoEdicion(e.target.value as 'activo'|'suspendido'|'inactivo')}>
+                     <option value="activo">Activo</option><option value="suspendido">Suspendido</option><option value="inactivo">Inactivo</option>
+                   </select>
+                 </label>
+                 <p className="edit-note">Las cuentas vinculadas y las asignaciones con historial tienen restricciones de seguridad e integridad.</p>
+                 <button className="button primary" type="submit" disabled={guardando}>
+                   {guardando ? 'Guardando…' : 'Guardar cambios'}
+                 </button>
+               </form>}
                <button type="button" className="button ghost dangerous employee-delete-action"
                  disabled={guardando} onClick={eliminarEmpleado}>Eliminar empleado</button>
              </>}
