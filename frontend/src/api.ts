@@ -24,10 +24,16 @@ export interface Empleado {
   apellidos: string;
   cargo: string;
   estado_vinculo: string;
+  foto_url?: string | null;
+  foto_data_url?: string | null;
 }
 
 export interface EmpleadoDetalle extends Empleado {
   fecha_ingreso: string | null;
+  dui?: string | null;
+  correo_contacto?: string | null;
+  telefono?: string | null;
+  numero_registro_profesional?: string | null;
   departamentos: Departamento[];
 }
 
