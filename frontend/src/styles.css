@@ -294,3 +294,26 @@
 .session-validation-mark{display:grid;place-items:center;width:58px;height:58px;border-radius:16px;background:#56314a;color:white;font-size:27px;font-weight:800}
 .session-validation strong{font-size:19px;letter-spacing:.035em}
 .session-validation span{font-size:13px;color:#776b77}
+
+/* Paquete 07: búsqueda de turnos por profesional y errores explicables */
+.shift-list-actions{flex:1;justify-content:flex-end;min-width:0}
+.shift-search{flex:1;min-width:190px;max-width:360px}
+.shift-search input{display:block;width:100%;min-width:0;min-height:44px;padding:10px 13px;border:1px solid #e6dce3;border-radius:11px;background:#fff;color:#332935;font:inherit;font-size:13px}
+.shift-search input:focus-visible{outline:3px solid #e9a5bd;outline-offset:2px}
+.shift-staff-cell{min-width:180px;max-width:290px;vertical-align:middle}
+.shift-staff-name{display:block;font-size:12px;line-height:1.6;font-weight:650;color:#413343}
+.shift-staff-name small{display:inline;font:10px ui-monospace,SFMono-Regular,Menlo,monospace;color:#8c7f88}
+.shift-empty-staff{font-size:11px;color:#9b8c97;font-style:italic}
+.shift-mobile-staff{display:grid;gap:5px;margin:0 0 14px;border-top:1px solid #f1e9ee;padding-top:12px}
+.shift-mobile-staff>strong{font-size:11px;color:#7b5870;font-weight:750}
+.shift-mobile-staff>span{font-size:12px;color:#3c303c;line-height:1.45}
+.shift-mobile-staff small{font-size:10px;color:#827483}
+.crud-error-detail{display:block;padding:14px 17px;line-height:1.5}
+.crud-error-detail>strong{display:block}
+.crud-error-detail p{margin:9px 0 0;font-size:12px;line-height:1.55}
+.crud-error-detail p b{font-weight:800}
+@media(max-width:760px){
+  .shift-list-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;width:100%;gap:8px}
+  .shift-search{min-width:0;max-width:none}
+  .shift-search input{font-size:16px;min-height:46px}
+}

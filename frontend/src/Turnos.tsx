@@ -5,10 +5,11 @@ import type { Departamento, Empleado } from './api';
 
 type Cargo = { id_cargo: string; nombre: string; categoria: string };
 type Especialidad = { id_especialidad: string; nombre: string; codigo: string };
+type PersonalTurno = {id_empleado:string;codigo_empleado:string;nombre_completo:string};
 type Turno = {
   id_turno: string; id_departamento: string; departamento: string;
   tipo_turno: string; inicio_at: string; fin_at: string; estado: string;
-  cupos_requeridos: number; cupos_ocupados: number;
+  cupos_requeridos: number; cupos_ocupados: number; personal_asignado?: PersonalTurno[];
 };
 type Requerimiento = {
   id_requerimiento: string; id_cargo: string; cargo: string;
@@ -71,35 +72,60 @@ export default function Turnos({
   const [seleccion, setSeleccion] = useState('');
   const [filtroArea, setFiltroArea] = useState('');
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const [busquedaAplicada, setBusquedaAplicada] = useState('');
+  const [cargandoBusqueda, setCargandoBusqueda] = useState(false);
+  const [errorInfo, setErrorInfo] = useState<{motivo?:string;solucion?:string}|null>(null);
 
   function errorApi(e: unknown) {
     if (e instanceof ApiError && e.status === 401) {
       onSesionExpirada();
       return;
     }
+    setErrorInfo(e instanceof ApiError ? {motivo:e.motivo,solucion:e.solucion}:null);
     setError(e instanceof Error ? e.message : 'No se pudo completar la operación');
   }
 
   async function cargarListado() {
-    const resultado = await requestApi<{ turnos: Turno[] }>('/api/turnos', token);
+    const q = busquedaAplicada.trim();
+    const resultado = await requestApi<{turnos:Turno[]}>('/api/turnos'+(q?'?q='+encodeURIComponent(q):''),token);
     setTurnos(resultado.turnos);
   }
 
   useEffect(() => {
     let activo = true;
     Promise.all([
-      requestApi<{ turnos: Turno[] }>('/api/turnos', token),
       requestApi<{ cargos: Cargo[] }>('/api/cargos', token),
       requestApi<{ especialidades: Especialidad[] }>('/api/especialidades', token)
-    ]).then(([t, c, s]) => {
+    ]).then(([c, s]) => {
       if (!activo) return;
-      setTurnos(t.turnos); setCargos(c.cargos); setEspecialidades(s.especialidades);
+      setCargos(c.cargos); setEspecialidades(s.especialidades);
     }).catch(e => { if (activo) errorApi(e); })
       .finally(() => { if (activo) setCargando(false); });
     return () => { activo = false; };
     // Se recargará al cambiar la sesión.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // Búsqueda remota con debounce: la API filtra ANTES del límite de 100.
+  useEffect(() => {
+    const id = setTimeout(() => setBusquedaAplicada(busqueda.trim()), 300);
+    return () => clearTimeout(id);
+  }, [busqueda]);
+
+  useEffect(() => {
+    let activo = true;
+    setCargandoBusqueda(true);
+    const ruta='/api/turnos'+(busquedaAplicada?'?q='+encodeURIComponent(busquedaAplicada):'');
+    requestApi<{turnos:Turno[]}>(ruta,token)
+      .then(r=>{if(activo)setTurnos(r.turnos);})
+      .catch(e=>{if(activo)errorApi(e);})
+      .finally(()=>{if(activo)setCargandoBusqueda(false);});
+    return ()=>{activo=false;};
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[token,busquedaAplicada]);
+
+  useEffect(()=>{if(!error)setErrorInfo(null);},[error]);
 
   const listados = useMemo(() =>
     turnos.filter(t => !filtroArea || t.id_departamento === filtroArea),
@@ -265,7 +291,11 @@ export default function Turnos({
       </section>
 
       {mensaje && <div className="shift-success" role="status">✓ {mensaje}</div>}
-      {error && <div className="alert" role="alert">! {error}</div>}
+      {error && <div className="alert crud-error-detail" role="alert">
+        <strong>{error}</strong>
+        {errorInfo?.motivo && <p><b>¿Por qué?</b> {errorInfo.motivo}</p>}
+        {errorInfo?.solucion && <p><b>¿Cómo solucionarlo?</b> {errorInfo.solucion}</p>}
+      </div>}
 
       <div className="shift-metrics">
         <div><span>Turnos abiertos</span><strong>{programados}</strong></div>
@@ -331,8 +361,15 @@ export default function Turnos({
       <section className="panel shift-list-panel">
         <div className="panel-heading wrap-heading">
           <div><div className="eyebrow">PROGRAMACIÓN</div><h2>Turnos registrados</h2>
-            <p>{listados.length} turnos en el listado</p></div>
+            <p>{listados.length} turnos {busquedaAplicada ? 'encontrados' : 'en el listado'}{cargandoBusqueda?' · Buscando…':''}</p></div>
           <div className="shift-list-actions">
+            <label className="shift-search">
+              <span className="sr-only">Buscar turnos o personal asignado</span>
+              <input type="search" value={busqueda} maxLength={80}
+                placeholder="Buscar médico, código o turno…"
+                aria-label="Buscar por médico, código de empleado, número de turno o departamento"
+                onChange={e=>setBusqueda(e.target.value)}/>
+            </label>
             <button type="button" className={'button ghost small' + (filtroArea ? ' has-filter' : '')}
               aria-expanded={mostrarFiltros} aria-controls="shift-filter-options"
               onClick={() => setMostrarFiltros(v => !v)}>☷ Filtros{filtroArea ? ' · 1' : ''}</button>
@@ -348,18 +385,26 @@ export default function Turnos({
           <button type="button" className="text-button" onClick={() => {setFiltroArea('');setMostrarFiltros(false);}}>Limpiar filtros</button>
         </div>}
         <div className="table-wrap shift-desktop-table"><table>
-          <thead><tr><th>Departamento</th><th>Fecha y hora</th><th>Tipo</th><th>Cobertura</th><th>Estado</th><th></th></tr></thead>
+          <thead><tr><th>Departamento</th><th>Fecha y hora</th><th>Tipo</th><th>Personal asignado</th><th>Cobertura</th><th>Estado</th><th></th></tr></thead>
           <tbody>
             {listados.map(t => <tr key={t.id_turno}>
               <td><strong>{t.departamento}</strong></td>
               <td><span className="shift-date">{textoFecha(t.inicio_at)}</span><span className="cell-sub">Hasta {textoFecha(t.fin_at)}</span></td>
               <td className="shift-capitalize">{t.tipo_turno}</td>
+              <td className="shift-staff-cell">
+                {t.personal_asignado?.length ? t.personal_asignado.map(p=>
+                  <span key={p.id_empleado} className="shift-staff-name">
+                    {p.nombre_completo} <small>({p.codigo_empleado})</small>
+                  </span>) : <span className="shift-empty-staff">Sin personal asignado</span>}
+              </td>
               <td><div className="shift-coverage"><strong>{t.cupos_ocupados} / {t.cupos_requeridos}</strong><div className="shift-bar"><span style={{width:t.cupos_requeridos > 0 ? (100*t.cupos_ocupados/t.cupos_requeridos)+'%':'0%'}}/></div></div></td>
               <td><span className={'status '+(t.estado==='abierto'?'status-green':'status-amber')}>{t.estado}</span></td>
               <td><button type="button" className="text-button" disabled={procesando} onClick={() => abrirTurno(t.id_turno)}>Detalles →</button></td>
             </tr>)}
-            {!cargando && listados.length===0 && <tr><td colSpan={6} className="no-rows">No hay turnos para estos filtros.</td></tr>}
-            {cargando && <tr><td colSpan={6} className="no-rows">Cargando turnos…</td></tr>}
+            {!(cargando || cargandoBusqueda) && listados.length===0 && <tr><td colSpan={7} className="no-rows">
+              {busquedaAplicada ? 'No se encontraron turnos coincidentes. Para buscar un médico, debe tener una asignación vigente.' : 'No hay turnos para estos filtros.'}
+            </td></tr>}
+            {(cargando || cargandoBusqueda) && <tr><td colSpan={7} className="no-rows">Buscando turnos…</td></tr>}
           </tbody>
         </table></div>
         <div className="shift-mobile-list">
@@ -373,6 +418,12 @@ export default function Turnos({
               <strong>{textoFecha(t.inicio_at)}</strong>
               <small>Hasta {textoFecha(t.fin_at)}</small>
             </div>
+            <div className="shift-mobile-staff">
+              <strong>Personal asignado</strong>
+              {t.personal_asignado?.length ? t.personal_asignado.map(p=>
+                <span key={p.id_empleado}>{p.nombre_completo} <small>· {p.codigo_empleado}</small></span>
+              ) : <span className="shift-empty-staff">Sin personal asignado</span>}
+            </div>
             <div className="shift-mobile-footer">
               <div className="shift-coverage"><strong>Cobertura {t.cupos_ocupados} / {t.cupos_requeridos}</strong>
                 <div className="shift-bar"><span style={{width:t.cupos_requeridos>0?(100*t.cupos_ocupados/t.cupos_requeridos)+'%':'0%'}}/></div>
@@ -381,8 +432,10 @@ export default function Turnos({
                 onClick={() => abrirTurno(t.id_turno)}>Ver detalles →</button>
             </div>
           </article>)}
-          {!cargando && listados.length===0 && <div className="employee-mobile-empty">No hay turnos para estos filtros.</div>}
-          {cargando && <div className="employee-mobile-empty">Cargando turnos…</div>}
+          {!(cargando || cargandoBusqueda) && listados.length===0 && <div className="employee-mobile-empty">
+            {busquedaAplicada ? 'No hay turnos coincidentes. Si buscas un médico, verifica que esté asignado a un turno.' : 'No hay turnos para estos filtros.'}
+          </div>}
+          {(cargando || cargandoBusqueda) && <div className="employee-mobile-empty">Buscando turnos…</div>}
         </div>
         <div className="table-footer">Hasta 100 turnos. Coberturas calculadas por PostgreSQL.</div>
       </section>
@@ -428,7 +481,11 @@ export default function Turnos({
             <button type="button" className="button ghost dangerous" disabled={procesando}
               onClick={eliminarTurno}>Eliminar definitivamente</button>
           </div>}
-          {error && <div className="alert" role="alert">! {error}</div>}
+          {error && <div className="alert crud-error-detail" role="alert">
+        <strong>{error}</strong>
+        {errorInfo?.motivo && <p><b>¿Por qué?</b> {errorInfo.motivo}</p>}
+        {errorInfo?.solucion && <p><b>¿Cómo solucionarlo?</b> {errorInfo.solucion}</p>}
+      </div>}
           {mensaje && <div className="shift-success" role="status">✓ {mensaje}</div>}
         </section>
       </div>}

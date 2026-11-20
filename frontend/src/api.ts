@@ -51,7 +51,11 @@ export interface Acreditacion {
 }
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number, message: string,
+    public motivo?: string, public solucion?: string,
+    public codigo?: string
+  ) {
     super(message);
     this.name = 'ApiError';
   }
@@ -80,7 +84,13 @@ export async function requestApi<T>(
     const message = typeof result === 'object' && result !== null && 'error' in result
       ? String((result as { error: unknown }).error)
       : 'La solicitud no se pudo completar.';
-    throw new ApiError(response.status, message);
+    const detalle = typeof result === 'object' && result !== null
+      ? result as { motivo?: unknown; solucion?: unknown; codigo?: unknown }
+      : {};
+    throw new ApiError(response.status, message,
+      typeof detalle.motivo === 'string' ? detalle.motivo : undefined,
+      typeof detalle.solucion === 'string' ? detalle.solucion : undefined,
+      typeof detalle.codigo === 'string' ? detalle.codigo : undefined);
   }
   return result as T;
 }
