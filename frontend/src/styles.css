@@ -387,3 +387,11 @@
   .password-change-panel{padding:23px 19px;border-radius:15px}
   .user-create-form input:not([type=checkbox]),.user-create-form select{font-size:16px}
 }
+
+/* Gestión opcional del carnet del superadministrador */
+.user-admin-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.user-admin-actions .button{min-height:44px}
+@media(max-width:760px){
+  .user-admin-actions{width:100%;display:grid;grid-template-columns:minmax(0,1fr)}
+  .user-admin-actions .button{width:100%;justify-content:center}
+}
