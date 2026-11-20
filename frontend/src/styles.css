@@ -288,3 +288,9 @@
 
 /* Retratos fotográficos de la demo, cuadrícula optimizada 4×4 */
 .employee-avatar .employee-avatar-portrait{position:absolute;inset:0;display:block;z-index:1;background-size:400% 400%;background-repeat:no-repeat;background-color:#e4e7ed}
+
+/* Recuperación segura de sesión al refrescar la pestaña del navegador */
+.session-validation{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#f8f7fa;color:#302537;padding:24px;text-align:center}
+.session-validation-mark{display:grid;place-items:center;width:58px;height:58px;border-radius:16px;background:#56314a;color:white;font-size:27px;font-weight:800}
+.session-validation strong{font-size:19px;letter-spacing:.035em}
+.session-validation span{font-size:13px;color:#776b77}
