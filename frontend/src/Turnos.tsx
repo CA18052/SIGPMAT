@@ -336,7 +336,6 @@ export default function Turnos({
             <button type="button" className={'button ghost small' + (filtroArea ? ' has-filter' : '')}
               aria-expanded={mostrarFiltros} aria-controls="shift-filter-options"
               onClick={() => setMostrarFiltros(v => !v)}>☷ Filtros{filtroArea ? ' · 1' : ''}</button>
-            <button className="button ghost small" onClick={() => cargarListado().catch(errorApi)} type="button">Actualizar</button>
           </div>
         </div>
         {mostrarFiltros && <div id="shift-filter-options" className="employee-filter-panel">
