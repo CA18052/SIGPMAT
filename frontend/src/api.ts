@@ -65,6 +65,27 @@ export class ApiError extends Error {
   }
 }
 
+export type SolicitudConfirmacion = { metodo: string; ruta: string };
+type PedirContrasena = (solicitud: SolicitudConfirmacion) => Promise<string | null>;
+let proveedorConfirmacion: PedirContrasena | null = null;
+
+export function establecerProveedorConfirmacion(proveedor: PedirContrasena | null) {
+  proveedorConfirmacion = proveedor;
+}
+
+const EXENTAS_CONFIRMACION = new Set([
+  '/api/auth/login','/api/auth/registrar','/api/auth/cambiar-contrasena',
+  '/api/auth/confirmar-operacion'
+]);
+
+export async function registrarVisitante(carnet: string, contrasena: string, nombre_mostrado?: string) {
+  return requestApi<{registrado:boolean;mensaje:string;nombre_usuario:string;permisos:string}>(
+    '/api/auth/registrar',null,{
+      method:'POST',
+      body:JSON.stringify({carnet,contrasena,...(nombre_mostrado?{nombre_mostrado}:{})})
+    });
+}
+
 export async function requestApi<T>(
   path: string,
   token: string | null = null,
@@ -74,6 +95,21 @@ export async function requestApi<T>(
   headers.set('Accept', 'application/json');
   if (token) headers.set('Authorization', 'Bearer ' + token);
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+
+  const metodo=(init.method||'GET').toUpperCase();
+  const ruta=path.split('?')[0];
+  const necesitaConfirmacion=token && ['POST','PUT','PATCH','DELETE'].includes(metodo)
+    && !EXENTAS_CONFIRMACION.has(ruta);
+  if(necesitaConfirmacion){
+    if(!proveedorConfirmacion)throw new ApiError(428,'La confirmación de contraseña no está disponible. Vuelve a abrir el sistema.');
+    const contrasena=await proveedorConfirmacion({metodo,ruta});
+    if(contrasena===null)throw new ApiError(0,'Operación cancelada. No se modificó ningún dato.');
+    const confirmado=await requestApi<{confirmacion:string}>(
+      '/api/auth/confirmar-operacion',token,{
+        method:'POST',body:JSON.stringify({contrasena,metodo,ruta})
+      });
+    headers.set('X-SIGPMAT-Confirmacion',confirmado.confirmacion);
+  }
 
   let response: Response;
   try {
