@@ -31,13 +31,34 @@ const departamentoProps = {
   ubicacion: { anyOf:[{type:'string',maxLength:120},{type:'null'}] },
   extension: { anyOf:[{type:'string',maxLength:20},{type:'null'}] }
 };
+type ErrorCrud = { error: string; motivo: string; solucion: string; codigo: string };
+const explicar = (
+  reply: FastifyReply, estado: number, error: string,
+  motivo: string, solucion: string, codigo: string
+) => reply.code(estado).send({ error, motivo, solucion, codigo } satisfies ErrorCrud);
+
 const status = (e: unknown, request: FastifyRequest, reply: FastifyReply) => {
   const err = e as {code?:string;message?:string} | null;
-  if (err?.code==='23505') return reply.code(409).send({error:'Ya existe un registro con ese código o nombre.'});
-  if (err?.code==='23503') return reply.code(409).send({error:'El registro tiene información histórica vinculada. Usa desactivación o cancelación para conservar su trazabilidad.'});
-  if (err?.code==='23514') return reply.code(409).send({error:err.message?.startsWith('SIGPMAT:')?err.message.slice(9):'El cambio contradice una regla de asignación o integridad.'});
+  // Mantener los errores técnicos completos SOLO en el log del servidor.
+  if (err?.code==='23505') return explicar(reply,409,'No se pudo guardar el registro.',
+    'Ya existe otro registro con ese código o nombre.',
+    'Utiliza un código diferente o modifica el registro existente.','REGISTRO_DUPLICADO');
+  if (err?.code==='23503') return explicar(reply,409,'No se puede completar la operación.',
+    'El registro tiene datos relacionados que PostgreSQL debe conservar.',
+    'Revisa las dependencias y, si conserva historial, utiliza la baja o cancelación en lugar del borrado físico.','REGISTRO_CON_DEPENDENCIAS');
+  if (err?.code==='23514') return explicar(reply,409,'Operación rechazada.',
+    err.message?.startsWith('SIGPMAT:') ? err.message.slice(9) : 'El cambio contradice una regla del sistema.',
+    'Corrige los datos o consulta las restricciones de cobertura y asignación.','REGLA_INTEGRIDAD');
+  if (err?.code==='42501') {
+    request.log.error({err:e},'Privilegio PostgreSQL insuficiente en CRUD');
+    return explicar(reply,500,'No se puede completar la operación.',
+      'La conexión de la aplicación no tiene permisos suficientes en la base de datos.',
+      'Contacta al administrador técnico para revisar los privilegios de la cuenta de PostgreSQL; tus datos no se modificaron.','PERMISOS_BASE_DATOS');
+  }
   request.log.error({err:e},'CRUD administrativo');
-  return reply.code(500).send({error:'No fue posible completar la operación.'});
+  return explicar(reply,500,'No se pudo completar la operación.',
+    'Ocurrió un error inesperado en el servidor. No es posible determinar la causa únicamente desde esta pantalla.',
+    'Intenta nuevamente. Si persiste, comunica al equipo técnico el código de incidencia ' + request.id + '.','INCIDENCIA_' + request.id);
 };
 async function revertir(client: PoolClient) {
   try { await client.query('ROLLBACK'); } catch { /* conexión interrumpida */ }
@@ -127,7 +148,9 @@ export function registrarCrudGestion(app: FastifyInstance) {
         ) AS referencias`,[request.params.id]);
       if(dependencias.rows[0]?.referencias){
         await revertir(client);
-        return reply.code(409).send({error:'Este departamento tiene empleados, turnos o políticas históricas. No puede borrarse físicamente; utiliza Desactivar después de resolver sus turnos.'});
+        return explicar(reply,409,'No se puede eliminar el departamento.',
+          'Existen empleados adscritos, turnos o políticas históricas vinculadas al departamento.',
+          'Resuelve primero los turnos abiertos y usa Desactivar para preservar su historial.','DEPARTAMENTO_CON_HISTORIAL');
       }
       await client.query('DELETE FROM sigpmat.departamentos WHERE id_departamento=$1::bigint',[request.params.id]);
       await client.query('COMMIT');
@@ -145,9 +168,15 @@ export function registrarCrudGestion(app: FastifyInstance) {
       await client.query('BEGIN');
       const empleado=await client.query(
         'SELECT 1 FROM sigpmat.empleados WHERE id_empleado=$1::bigint FOR UPDATE',[request.params.id]);
-      if(!empleado.rowCount){await revertir(client);return reply.code(404).send({error:'Empleado no encontrado'});}
+      if(!empleado.rowCount){await revertir(client);return explicar(reply,404,
+  'No se encontró el empleado.',
+  'El expediente ya no existe o fue eliminado por otro administrador.',
+  'Actualiza la lista de empleados y selecciona un registro vigente.','EMPLEADO_NO_ENCONTRADO');}
       const cuenta=await client.query('SELECT 1 FROM sigpmat.usuarios WHERE id_empleado=$1::bigint LIMIT 1',[request.params.id]);
-      if(cuenta.rowCount){await revertir(client);return reply.code(409).send({error:'Este empleado tiene una cuenta de acceso vinculada. No se puede eliminar.'});}
+      if(cuenta.rowCount){await revertir(client);return explicar(reply,409,
+  'No se puede eliminar el empleado.',
+  'Este expediente está vinculado a una cuenta de usuario del sistema.',
+  'Conserva el expediente; la cuenta debe gestionarse desde Administración de usuarios antes de considerar su eliminación.','EMPLEADO_CON_CUENTA');}
       const historial=await client.query<{tiene:boolean}>(
         `SELECT (
           EXISTS(SELECT 1 FROM sigpmat.asignaciones_turno WHERE id_empleado=$1::bigint)
@@ -158,7 +187,10 @@ export function registrarCrudGestion(app: FastifyInstance) {
           OR EXISTS(SELECT 1 FROM sigpmat.excepciones_disponibilidad WHERE id_empleado=$1::bigint)
           OR EXISTS(SELECT 1 FROM sigpmat.registros_asistencia ra JOIN sigpmat.asignaciones_turno at ON at.id_asignacion=ra.id_asignacion WHERE at.id_empleado=$1::bigint)
         ) AS tiene`,[request.params.id]);
-      if(historial.rows[0]?.tiene){await revertir(client);return reply.code(409).send({error:'Este empleado tiene historial laboral o asignaciones. Conserva su expediente y cambia su estado a Inactivo desde Editar.'});}
+      if(historial.rows[0]?.tiene){await revertir(client);return explicar(reply,409,
+  'No se puede eliminar el empleado.',
+  'Tiene asignaciones, disponibilidades, solicitudes u otros antecedentes vinculados.',
+  'Consulta sus turnos y cancela las asignaciones activas cuando corresponda; utiliza Editar → Estado laboral → Inactivo para conservar el historial.','EMPLEADO_CON_HISTORIAL');}
       await client.query('DELETE FROM sigpmat.empleado_especialidad WHERE id_empleado=$1::bigint',[request.params.id]);
       await client.query('DELETE FROM sigpmat.empleado_departamento WHERE id_empleado=$1::bigint',[request.params.id]);
       await client.query('DELETE FROM sigpmat.empleados WHERE id_empleado=$1::bigint',[request.params.id]);
@@ -246,7 +278,9 @@ export function registrarCrudGestion(app: FastifyInstance) {
           OR EXISTS(SELECT 1 FROM sigpmat.propuestas_asignacion p JOIN sigpmat.requerimientos_turno r ON r.id_requerimiento=p.id_requerimiento WHERE r.id_turno=$1::bigint)
           OR EXISTS(SELECT 1 FROM sigpmat.emergencias WHERE id_turno=$1::bigint)
         ) AS tiene`,[request.params.id]);
-      if(hist.rows[0]?.tiene){await revertir(client);return reply.code(409).send({error:'El turno tiene asignaciones u otros registros históricos. No se puede borrar físicamente. Cancela sus asignaciones y después usa Cancelar turno.'});}
+      if(hist.rows[0]?.tiene){await revertir(client);return explicar(reply,409,'No se puede eliminar el turno.',
+  'Tiene asignaciones de personal u otros registros históricos vinculados.',
+  'Revisa sus asignaciones y utiliza Cancelar turno cuando corresponda, para conservar la trazabilidad.','TURNO_CON_HISTORIAL');}
       await client.query('DELETE FROM sigpmat.requerimientos_turno WHERE id_turno=$1::bigint',[request.params.id]);
       await client.query('DELETE FROM sigpmat.turnos WHERE id_turno=$1::bigint',[request.params.id]);
       await client.query('COMMIT');
