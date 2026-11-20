@@ -69,6 +69,7 @@ export default function Turnos({
   const [candidatos, setCandidatos] = useState<Empleado[]>([]);
   const [seleccion, setSeleccion] = useState('');
   const [filtroArea, setFiltroArea] = useState('');
+  const [mostrarFiltros, setMostrarFiltros] = useState(false);
 
   function errorApi(e: unknown) {
     if (e instanceof ApiError && e.status === 401) {
@@ -285,33 +286,64 @@ export default function Turnos({
         </form>
       </section>}
 
-      <section className="panel">
+      <section className="panel shift-list-panel">
         <div className="panel-heading wrap-heading">
-          <div><div className="eyebrow">PROGRAMACIÓN</div><h2>Turnos registrados</h2><p>{listados.length} turnos en el listado</p></div>
-          <div className="filters">
-            <select aria-label="Filtrar turnos por departamento" value={filtroArea} onChange={e=>setFiltroArea(e.target.value)}>
-              <option value="">Todos los departamentos</option>
-              {departamentos.map(d=><option key={d.id_departamento} value={d.id_departamento}>{d.nombre}</option>)}
-            </select>
+          <div><div className="eyebrow">PROGRAMACIÓN</div><h2>Turnos registrados</h2>
+            <p>{listados.length} turnos en el listado</p></div>
+          <div className="shift-list-actions">
+            <button type="button" className={'button ghost small' + (filtroArea ? ' has-filter' : '')}
+              aria-expanded={mostrarFiltros} aria-controls="shift-filter-options"
+              onClick={() => setMostrarFiltros(v => !v)}>☷ Filtros{filtroArea ? ' · 1' : ''}</button>
             <button className="button ghost small" onClick={() => cargarListado().catch(errorApi)} type="button">Actualizar</button>
           </div>
         </div>
-        <div className="table-wrap"><table>
+        {mostrarFiltros && <div id="shift-filter-options" className="employee-filter-panel">
+          <label>Departamento
+            <select value={filtroArea} onChange={e => setFiltroArea(e.target.value)}>
+              <option value="">Todos los departamentos</option>
+              {departamentos.map(d => <option key={d.id_departamento} value={d.id_departamento}>{d.nombre}</option>)}
+            </select>
+          </label>
+          <button type="button" className="text-button" onClick={() => {setFiltroArea('');setMostrarFiltros(false);}}>Limpiar filtros</button>
+        </div>}
+        <div className="table-wrap shift-desktop-table"><table>
           <thead><tr><th>Departamento</th><th>Fecha y hora</th><th>Tipo</th><th>Cobertura</th><th>Estado</th><th></th></tr></thead>
           <tbody>
-            {listados.map(t=><tr key={t.id_turno}>
+            {listados.map(t => <tr key={t.id_turno}>
               <td><strong>{t.departamento}</strong></td>
               <td><span className="shift-date">{textoFecha(t.inicio_at)}</span><span className="cell-sub">Hasta {textoFecha(t.fin_at)}</span></td>
               <td className="shift-capitalize">{t.tipo_turno}</td>
-              <td><div className="shift-coverage"><strong>{t.cupos_ocupados} / {t.cupos_requeridos}</strong><div className="shift-bar"><span style={{width: t.cupos_requeridos > 0 ? (100*t.cupos_ocupados/t.cupos_requeridos)+'%' : '0%'}}/></div></div></td>
+              <td><div className="shift-coverage"><strong>{t.cupos_ocupados} / {t.cupos_requeridos}</strong><div className="shift-bar"><span style={{width:t.cupos_requeridos > 0 ? (100*t.cupos_ocupados/t.cupos_requeridos)+'%':'0%'}}/></div></div></td>
               <td><span className={'status '+(t.estado==='abierto'?'status-green':'status-amber')}>{t.estado}</span></td>
-              <td><button className="text-button" disabled={procesando} onClick={()=>abrirTurno(t.id_turno)}>Detalles →</button></td>
+              <td><button type="button" className="text-button" disabled={procesando} onClick={() => abrirTurno(t.id_turno)}>Detalles →</button></td>
             </tr>)}
-            {!cargando && listados.length===0 && <tr><td colSpan={6} className="no-rows">Todavía no hay turnos registrados. Crea el primero para comenzar.</td></tr>}
+            {!cargando && listados.length===0 && <tr><td colSpan={6} className="no-rows">No hay turnos para estos filtros.</td></tr>}
             {cargando && <tr><td colSpan={6} className="no-rows">Cargando turnos…</td></tr>}
           </tbody>
         </table></div>
-        <div className="table-footer">Se muestran hasta 100 turnos. Los datos proceden de PostgreSQL.</div>
+        <div className="shift-mobile-list">
+          {listados.map(t => <article className="shift-mobile-card" key={t.id_turno}>
+            <div className="shift-mobile-heading">
+              <div><span className="eyebrow">TURNO {t.id_turno}</span><h3>{t.departamento}</h3></div>
+              <span className={'status '+(t.estado==='abierto'?'status-green':'status-amber')}>{t.estado}</span>
+            </div>
+            <div className="shift-mobile-time">
+              <span className="shift-capitalize">{t.tipo_turno}</span>
+              <strong>{textoFecha(t.inicio_at)}</strong>
+              <small>Hasta {textoFecha(t.fin_at)}</small>
+            </div>
+            <div className="shift-mobile-footer">
+              <div className="shift-coverage"><strong>Cobertura {t.cupos_ocupados} / {t.cupos_requeridos}</strong>
+                <div className="shift-bar"><span style={{width:t.cupos_requeridos>0?(100*t.cupos_ocupados/t.cupos_requeridos)+'%':'0%'}}/></div>
+              </div>
+              <button className="text-button" type="button" disabled={procesando}
+                onClick={() => abrirTurno(t.id_turno)}>Ver detalles →</button>
+            </div>
+          </article>)}
+          {!cargando && listados.length===0 && <div className="employee-mobile-empty">No hay turnos para estos filtros.</div>}
+          {cargando && <div className="employee-mobile-empty">Cargando turnos…</div>}
+        </div>
+        <div className="table-footer">Hasta 100 turnos. Coberturas calculadas por PostgreSQL.</div>
       </section>
 
       {detalle && <div className="overlay" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setDetalle(null);}}>
