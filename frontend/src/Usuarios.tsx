@@ -35,6 +35,10 @@ export default function Usuarios({
   const [contrasena,setContrasena]=useState('');
   const [generar,setGenerar]=useState(true);
   const [claveVisible,setClaveVisible]=useState<{usuario:string;clave:string}|null>(null);
+  const [mostrarMiIdentidad,setMostrarMiIdentidad]=useState(false);
+  const [miCarnet,setMiCarnet]=useState('');
+  const [miNombre,setMiNombre]=useState('');
+  const [miContrasena,setMiContrasena]=useState('');
 
   const manejarError=useCallback((e:unknown)=>{
     if(e instanceof ApiError && e.status===401){onSesionExpirada();return;}
@@ -82,6 +86,25 @@ export default function Usuarios({
     finally{setProcesando('');}
   }
 
+  async function actualizarMiIdentidad(e:FormEvent<HTMLFormElement>){
+    e.preventDefault();if(procesando)return;
+    setProcesando('identidad');setError('');setExito('');
+    try{
+      await requestApi('/api/admin/usuarios/mi-identidad',token,{
+        method:'PATCH',
+        body:JSON.stringify({
+          nuevo_usuario:miCarnet.trim(),
+          nombre_mostrado:miNombre.trim(),
+          contrasena_actual:miContrasena
+        })
+      });
+      setMiContrasena('');
+      // Cambiar el carnet revoca el JWT: iniciar sesión usando el nuevo carnet.
+      onSesionExpirada();
+    }catch(e){manejarError(e);}
+    finally{setProcesando('');}
+  }
+
   async function cambiarEstado(u:Cuenta){
     if(procesando||u.es_superadministrador)return;
     const nuevo=u.estado==='activa'?'bloqueada':'activa';
@@ -123,9 +146,20 @@ export default function Usuarios({
           <h2>Administración de usuarios</h2>
           <p>Acceso reservado al superadministrador. Cada persona utiliza sus propias credenciales.</p>
         </div>
-        <button type="button" className="button primary" onClick={()=>{
-          setCrear(v=>!v);setError('');setClaveVisible(null);
-        }}>{crear?'Cancelar alta':'+ Crear usuario'}</button>
+        <div className="user-admin-actions">
+          <button type="button" className="button ghost"
+            onClick={()=>{
+              const propia=usuarios.find(u=>u.es_superadministrador);
+              setMiCarnet(propia?.nombre_usuario==='admin.demo'?'':propia?.nombre_usuario||'');
+              setMiNombre(propia?.nombre_mostrado||'');
+              setMostrarMiIdentidad(v=>!v);setCrear(false);setError('');setClaveVisible(null);
+            }}>
+            {mostrarMiIdentidad?'Cerrar mi identidad':'Usar mi carnet como usuario'}
+          </button>
+          <button type="button" className="button primary" onClick={()=>{
+            setCrear(v=>!v);setMostrarMiIdentidad(false);setError('');setClaveVisible(null);
+          }}>{crear?'Cancelar alta':'+ Crear usuario'}</button>
+        </div>
       </div>
       {error&&<div role="alert" className="alert">{error}</div>}
       {exito&&<div role="status" className="employee-success">{exito}</div>}
@@ -143,6 +177,35 @@ export default function Usuarios({
         }}>Copiar credenciales</button>
         <button type="button" className="text-button" onClick={()=>setClaveVisible(null)}>Ocultar contraseña</button>
       </div>}
+
+      {mostrarMiIdentidad&&<form className="user-create-form" onSubmit={actualizarMiIdentidad}>
+        <div className="user-form-heading">
+          <strong>Configurar mi cuenta como integrante del equipo</strong>
+          <p>Podrás utilizar tu carnet para iniciar sesión y conservarás el privilegio exclusivo de superadministrador. Por seguridad, debes confirmar tu contraseña actual. Después tendrás que entrar con el nuevo usuario.</p>
+        </div>
+        <label>Mi carnet universitario
+          <input required minLength={6} maxLength={20} pattern="[A-Za-z]{2,4}[0-9]{4,8}"
+            value={miCarnet} placeholder="AB12345" autoComplete="off"
+            onChange={e=>setMiCarnet(e.target.value)} disabled={!!procesando}/>
+        </label>
+        <label>Mi nombre
+          <input required minLength={3} maxLength={120} value={miNombre}
+            placeholder="Nombre completo" autoComplete="off"
+            onChange={e=>setMiNombre(e.target.value)} disabled={!!procesando}/>
+        </label>
+        <label>Confirmar contraseña actual
+          <input type="password" required maxLength={128} value={miContrasena}
+            autoComplete="current-password"
+            onChange={e=>setMiContrasena(e.target.value)} disabled={!!procesando}/>
+        </label>
+        <div className="employee-form-actions">
+          <button type="button" className="button ghost" disabled={!!procesando}
+            onClick={()=>setMostrarMiIdentidad(false)}>Cancelar</button>
+          <button type="submit" className="button primary" disabled={!!procesando}>
+            {procesando==='identidad'?'Actualizando…':'Confirmar cambio de usuario'}
+          </button>
+        </div>
+      </form>}
 
       {crear&&<form className="user-create-form" onSubmit={guardar}>
         <div className="user-form-heading">
