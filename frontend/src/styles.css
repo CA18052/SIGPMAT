@@ -317,3 +317,11 @@
   .shift-search{min-width:0;max-width:none}
   .shift-search input{font-size:16px;min-height:46px}
 }
+
+/* Paquete 07 — pie institucional y ayudas contextuales */
+.footer{display:block;text-align:center;padding:23px 12px max(16px,env(safe-area-inset-bottom));margin-top:24px;border-top:1px solid #ece7ec;color:#8a808b;font-size:11px;letter-spacing:.015em;line-height:1.6}
+.shift-list-hint{border-top:1px solid #f2eff2;margin:0;padding:15px 18px 17px;color:#8b808b;font-size:11px;line-height:1.6}
+@media(max-width:760px){
+  .footer{margin-top:20px;padding:20px 12px max(18px,env(safe-area-inset-bottom));font-size:11px}
+  .shift-list-hint{padding:14px 16px}
+}

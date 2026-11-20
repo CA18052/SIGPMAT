@@ -68,7 +68,7 @@ function PantallaLogin({ onLogin }: { onLogin: (session: Sesion) => void }) {
           <h1>Una operación<br />más clara.<br /><em>Un equipo mejor<br />coordinado.</em></h1>
           <p>Personal, departamentos y cobertura hospitalaria en un mismo entorno de trabajo.</p>
         </div>
-        <div className="login-footnote"><span className="status-dot" /> Entorno académico de desarrollo · UES 2026</div>
+        <div className="login-footnote"><span className="status-dot" /> Universidad de El Salvador</div>
       </section>
       <main className="login-form-area">
         <div className="login-box">
@@ -418,7 +418,7 @@ export default function App() {
               </button>
             ))}
           </nav>
-          <div className="sidebar-note"><div className="note-spark">✦</div><strong>Espacio de desarrollo</strong><p>Información ficticia para pruebas y demostración.</p></div>
+          <div className="sidebar-note"><div className="note-spark" aria-hidden="true">✦</div><strong>Acceso por roles</strong><p>Consulta y administra exclusivamente la información autorizada para tu cuenta.</p></div>
         </div>
         <div className="sidebar-profile">
           <span className="profile-avatar">{iniciales}</span>
@@ -462,7 +462,7 @@ export default function App() {
           <div className="page-heading">
             <div><div className="eyebrow">ADMINISTRACIÓN OPERATIVA</div><h1>{etiquetas[pagina]}</h1>
               <p>{pagina === 'resumen' ? 'Una vista clara de la información disponible para tu perfil.' : pagina === 'empleados' ? 'Consulta y administra la información del personal autorizado.' : pagina === 'turnos' ? 'Programa turnos y asigna personal según la cobertura necesaria.' : 'Consulta las áreas hospitalarias disponibles según tu rol.'}</p></div>
-            <div className="date-pill">◷ <span>Datos consultados en PostgreSQL</span></div>
+            <div className="date-pill">◷ <span>Información según tu perfil</span></div>
           </div>
 
           {error && <ErrorMessage text={error}
@@ -472,7 +472,7 @@ export default function App() {
             <>
               <div className="metrics">
                 <div className="metric-card"><span className="metric-icon m1">▦</span><span className="metric-label">Departamentos visibles</span><strong>{departamentos.length}</strong><small>Según los permisos de la cuenta</small></div>
-                <div className="metric-card"><span className="metric-icon m2">▤</span><span className="metric-label">Empleados visibles</span><strong>{empleados.length}</strong><small>Hasta 100 registros por consulta</small></div>
+                <div className="metric-card"><span className="metric-icon m2">▤</span><span className="metric-label">Empleados visibles</span><strong>{empleados.length}</strong><small>En la consulta actual</small></div>
                 <div className="metric-card"><span className="metric-icon m3">✓</span><span className="metric-label">Personal activo</span><strong>{empleados.filter(e => e.estado_vinculo === 'activo').length}</strong><small>Dentro del listado autorizado</small></div>
                 <div className="metric-card"><span className="metric-icon m4">◷</span><span className="metric-label">Otros estados</span><strong>{empleados.filter(e => e.estado_vinculo !== 'activo').length}</strong><small>Suspendidos o inactivos</small></div>
               </div>
@@ -486,7 +486,6 @@ export default function App() {
                   <button type="button" className="quick-link" onClick={() => setPagina('empleados')}><span className="quick-icon">▤</span><span><strong>Consultar personal</strong><small>Datos y acreditaciones</small></span><span>→</span></button>
                   <button type="button" className="quick-link" onClick={() => setPagina('departamentos')}><span className="quick-icon">▦</span><span><strong>Explorar departamentos</strong><small>Áreas y personal adscrito</small></span><span>→</span></button>
                   <button type="button" className="quick-link" onClick={() => setPagina('turnos')}><span className="quick-icon">◷</span><span><strong>Planificar turnos</strong><small>Cupos y asignaciones</small></span><span>→</span></button>
-                  <div className="notice"><strong>En desarrollo</strong><p>La asignación automática y los reportes avanzados todavía no están disponibles.</p></div>
                 </section>
               </div>
             </>
@@ -550,7 +549,6 @@ export default function App() {
                 </article>)}
                 {listado.length === 0 && <div className="employee-mobile-empty">No hay empleados que coincidan con tu búsqueda.</div>}
               </div>
-              <div className="table-footer">Hasta 100 empleados por consulta. DUI y datos de contacto solo visibles para la administración.</div>
             </section>
           ) : pagina === 'turnos' ? (
             <Turnos token={token} departamentos={departamentos} esAdmin={esAdmin} onSesionExpirada={cerrarSesion} />
@@ -584,7 +582,7 @@ export default function App() {
               </div>
             </div>
           )}
-          <footer className="footer">SIGPMAT · Universidad de El Salvador · Proyecto académico 2026 <span>Demostración académica · Datos ficticios</span></footer>
+          <footer className="footer" aria-label="Institución académica">SIGMA · Universidad de El Salvador</footer>
         </div>
       </main>
 

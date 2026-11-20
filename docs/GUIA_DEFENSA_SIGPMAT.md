@@ -1,6 +1,6 @@
 # SIGPMAT — Guion de demostración y defensa técnica
 
-**Versión de referencia:** GitHub `main`, commit `e263ba7bae8e` (antes de iniciar auditoría); Render `sigpmat-demo.onrender.com`. Verificar versión publicada después de cualquier cambio posterior.
+**Versión de referencia:** GitHub `main` y Render `sigpmat-demo.onrender.com`. Antes de exponer, comprobar que el commit Live de Render coincida con el último commit aprobado en `main`; los números de commit anteriores ya no representan la versión más reciente.
 
 **Duración sugerida:** 10–12 minutos para el recorrido. Ajustar al tiempo concedido por el docente. **Entorno ficticio**, no utilizado en un hospital real.
 
@@ -111,3 +111,9 @@ Si son menos personas, combinar bloques; si son más, repartir según el proyect
 ## Regla de oro durante la presentación
 
 No improvisar una migración, no restaurar datos en vivo, no hacer despliegues mientras se expone y no modificar las 64 fichas ni los 24 turnos de muestra. Utilizar registros efímeros independientes y explicar las restricciones de forma técnica y verificable.
+
+## Funciones acumuladas para el guion final
+
+El documento [Inventario para el guion final](INVENTARIO_PARA_GUION_FINAL.md) registra todas las funciones ya integradas: menú responsive, sesión que se conserva al recargar la pestaña mientras el JWT siga vigente, búsqueda de turnos por nombre y código del profesional, visualización de personal asignado, gestión CRUD, rechazo explicativo con motivo y solución, retratos realistas sintéticos, roles y pruebas automatizadas. **Cuando el equipo pida el guion definitivo**, convertir este inventario en un recorrido cronológico actualizado, con demostraciones funcionales y tiempos reales.
+
+Las cuentas individuales, la confirmación de contraseña al guardar, la bitácora del superadministrador, los reportes avanzados y AURA **no deben presentarse como implementados** antes de que se desarrollen y se comprueben.
