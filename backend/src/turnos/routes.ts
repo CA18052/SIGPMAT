@@ -130,8 +130,9 @@ export function registrarRutasTurnos(app: FastifyInstance): void {
       )
       AND (
         $3::text='' OR
-        strpos(lower(t.id_turno::text),lower($3)) > 0 OR
-        strpos(lower(d.nombre),lower($3)) > 0 OR
+        ($3 ~ '^[0-9]+$' AND t.id_turno::text = $3) OR
+        ($3 !~ '^[0-9]+$' AND (
+          strpos(lower(d.nombre),lower($3)) > 0 OR
         strpos(lower(d.codigo),lower($3)) > 0 OR
         strpos(lower(t.tipo_turno),lower($3)) > 0 OR
         strpos(lower(t.estado),lower($3)) > 0 OR
@@ -149,6 +150,7 @@ export function registrarRutasTurnos(app: FastifyInstance): void {
               strpos(lower(c.nombre),lower($3)) > 0
             )
         )
+        ))
       )
       ORDER BY t.inicio_at DESC LIMIT 100
     `;
