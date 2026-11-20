@@ -14,7 +14,12 @@ export default function AvatarEmpleado({
   const indice = original && !empleado.foto_data_url
     ? /^\/retratos\/avatar-(\d{2})\.svg$/.exec(original)
     : null;
-  const posicion = indice ? Number(indice[1]) - 1 : -1;
+  // En el catálogo ficticio los índices 01–08 se asignaron a perfiles
+  // masculinos y 09–16 a perfiles femeninos; el mosaico original está mixto.
+  const ordenRealista = [0, 2, 5, 7, 8, 10, 12, 14, 1, 3, 4, 6, 9, 11, 13, 15];
+  const numeroReferencia = indice ? Number(indice[1]) - 1 : -1;
+  const posicion = numeroReferencia >= 0 && numeroReferencia < 16
+    ? ordenRealista[numeroReferencia] : -1;
   const retratoDemo = posicion >= 0 && posicion < 16;
   const x = (posicion % 4) * (100 / 3);
   const y = Math.floor(posicion / 4) * (100 / 3);
