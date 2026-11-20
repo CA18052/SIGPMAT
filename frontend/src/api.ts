@@ -2,6 +2,10 @@ export interface Usuario {
   id_usuario: string;
   nombre_usuario: string;
   roles: string[];
+  nombre_mostrado?: string | null;
+  tipo_cuenta?: string;
+  es_superadministrador?: boolean;
+  debe_cambiar_contrasena?: boolean;
 }
 
 export interface Sesion {

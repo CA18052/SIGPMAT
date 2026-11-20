@@ -325,3 +325,73 @@
   .footer{margin-top:20px;padding:20px 12px max(18px,env(safe-area-inset-bottom));font-size:11px}
   .shift-list-hint{padding:14px 16px}
 }
+
+/* Paquete 05 — gestión de cuentas, contraseñas temporales y administración individual */
+.users-console{min-width:0}
+.user-management-panel{overflow:hidden}
+.user-management-panel .panel-heading{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.user-management-panel .panel-heading>.button{min-height:44px}
+.user-create-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px;padding:23px 24px;background:#fdfbfc;border-block:1px solid #eee7ec}
+.user-create-form>label{display:grid;gap:8px;align-content:start;font-size:12px;font-weight:700;color:#534851;min-width:0}
+.user-create-form input:not([type=checkbox]),.user-create-form select,
+.password-change-panel input{width:100%;min-width:0;border:1px solid #e3dbe2;border-radius:10px;background:white;color:#332935;padding:12px 13px;font-size:14px;outline:none;min-height:44px}
+.user-create-form :is(input,select):focus-visible,.password-change-panel input:focus-visible{border-color:#a25173;box-shadow:0 0 0 3px #a2517320}
+.user-create-form small{color:#817681;font-size:11px;font-weight:400;line-height:1.5}
+.user-form-heading{grid-column:1/-1}
+.user-form-heading strong{font-size:16px;color:#302733}
+.user-form-heading p{font-size:12px;color:#827883;max-width:660px;margin:7px 0 0;line-height:1.6}
+.user-create-form .user-checkline{display:flex;align-items:center;gap:10px;grid-column:1/-1}
+.user-checkline input{width:18px;height:18px;accent-color:#823a5d}
+.user-form-warning{grid-column:1/-1;font-size:11px;color:#826d79;line-height:1.6;margin:0}
+.user-create-form .employee-form-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:10px}
+.user-list{padding:10px 24px 20px;display:grid}
+.user-item{display:flex;align-items:flex-start;gap:14px;padding:17px 0;border-bottom:1px solid #f1ecef}
+.user-item:last-child{border-bottom:0}
+.user-item-icon{flex:0 0 47px;width:47px;height:47px;background:#f5eaf0;color:#874263;border-radius:14px;display:grid;place-items:center;font-size:14px;font-weight:750;text-transform:uppercase}
+.user-item-body{flex:1;min-width:0;display:grid;gap:5px}
+.user-item-title{display:flex;align-items:center;flex-wrap:wrap;gap:9px}
+.user-item-title strong{font-size:14px;color:#322736;overflow-wrap:anywhere}
+.user-superadmin-label{font-size:10px;font-weight:800;color:#803450;background:#faedf3;padding:5px 8px;border-radius:30px}
+.user-item-username{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;color:#746b77;overflow-wrap:anywhere}
+.user-item-status{font-size:11px;color:#7c6b79}
+.user-item-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:7px}
+.user-item-actions .button{min-height:40px}
+.credentials-once{display:grid;align-items:start;gap:12px;border:1px solid #dcc1d0;border-radius:13px;background:#fbf3f7;padding:18px;margin:18px 24px}
+.credentials-once strong{color:#68314b;font-size:15px}
+.credentials-once p{margin:5px 0 0;color:#715764;line-height:1.55;font-size:12px}
+.credentials-data{display:grid;gap:7px}
+.credentials-data span{font-size:11px;color:#66515d;font-weight:650}
+.credentials-data code{font:14px ui-monospace,SFMono-Regular,Menlo,monospace;background:white;color:#392736;padding:12px;border:1px solid #ece2e8;border-radius:10px;overflow-wrap:anywhere;user-select:all}
+.credentials-once .button{justify-content:center;min-height:44px;max-width:260px}
+.credentials-once .text-button{width:max-content}
+.password-change-screen{min-height:100dvh;display:grid;place-items:center;background:#f7f4f7;padding:22px}
+.password-change-overlay{display:flex;align-items:center;justify-content:center;padding:18px;overflow-y:auto}
+.password-change-panel{width:100%;max-width:470px;max-height:calc(100dvh - 30px);overflow:auto;border:1px solid #ebe1e7;border-radius:20px;background:white;box-shadow:0 20px 70px #210f1e22;padding:28px;display:grid;gap:13px}
+.password-change-panel h1{font-size:25px;line-height:1.2;margin:0}
+.password-change-panel>p{font-size:13px;line-height:1.6;margin:0}
+.password-change-panel .employee-form{display:grid;gap:15px;margin-top:8px}
+.password-change-panel .employee-form label{display:grid;gap:7px;font-size:12px;font-weight:750;color:#4a3945}
+.password-change-panel .employee-form small{font-weight:400;font-size:11px;color:#897b85}
+.password-change-panel .employee-form .button{min-height:44px;justify-content:center}
+.password-change-icon{width:49px;height:49px;display:grid;place-items:center;background:#73304f;color:white;border-radius:14px;font-size:23px}
+.profile-security-button{color:#d9c9d1!important;font-size:12px}
+@media(max-width:760px){
+  .user-management-panel .panel-heading{flex-direction:column;align-items:stretch}
+  .user-management-panel .panel-heading>.button{width:100%;justify-content:center}
+  .user-create-form{grid-template-columns:minmax(0,1fr);padding:18px}
+  .user-list{padding:10px 17px 18px}
+  .user-item{gap:11px}
+  .user-item-icon{width:42px;height:42px;flex-basis:42px}
+  .user-item-actions .button{font-size:11px;min-height:44px}
+  .credentials-once{margin:14px;padding:14px}
+  .password-change-panel{padding:23px 19px;border-radius:15px}
+  .user-create-form input:not([type=checkbox]),.user-create-form select{font-size:16px}
+}
+
+/* Gestión opcional del carnet del superadministrador */
+.user-admin-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.user-admin-actions .button{min-height:44px}
+@media(max-width:760px){
+  .user-admin-actions{width:100%;display:grid;grid-template-columns:minmax(0,1fr)}
+  .user-admin-actions .button{width:100%;justify-content:center}
+}
