@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import Turnos from './Turnos';
 import NuevoEmpleado from './NuevoEmpleado';
+import AvatarEmpleado from './AvatarEmpleado';
 import {
   ApiError, iniciarSesion, requestApi
 } from './api';
@@ -91,6 +92,7 @@ export default function App() {
   const [filtrados, setFiltrados] = useState<Empleado[] | null>(null);
   const [filtro, setFiltro] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [version, setVersion] = useState(0);
@@ -357,7 +359,7 @@ export default function App() {
               <div className="dashboard-grid">
                 <section className="panel">
                   <div className="panel-heading"><div><div className="eyebrow">OPERACIÓN</div><h2>Personal reciente en el listado</h2></div><button type="button" className="text-button" onClick={() => setPagina('empleados')}>Ver personal →</button></div>
-                  <div className="table-wrap"><table><thead><tr><th>Empleado</th><th>Cargo</th><th>Estado</th></tr></thead><tbody>{empleados.slice(0, 6).map(e => <tr key={e.id_empleado}><td><strong>{e.nombres} {e.apellidos}</strong><span className="cell-sub">{e.codigo_empleado}</span></td><td>{e.cargo}</td><td><Estado estado={e.estado_vinculo}/></td></tr>)}{empleados.length === 0 && <tr><td colSpan={3} className="no-rows">Sin empleados visibles</td></tr>}</tbody></table></div>
+                  <div className="table-wrap"><table><thead><tr><th>Empleado</th><th>Cargo</th><th>Estado</th></tr></thead><tbody>{empleados.slice(0, 6).map(e => <tr key={e.id_empleado}><td><div className="employee-name-cell"><AvatarEmpleado empleado={e}/><div><strong>{e.nombres} {e.apellidos}</strong><span className="cell-sub">{e.codigo_empleado}</span></div></div></td><td>{e.cargo}</td><td><Estado estado={e.estado_vinculo}/></td></tr>)}{empleados.length === 0 && <tr><td colSpan={3} className="no-rows">Sin empleados visibles</td></tr>}</tbody></table></div>
                 </section>
                 <section className="panel operations">
                   <div className="eyebrow">ACCESOS RÁPIDOS</div><h2>Continuar trabajando</h2>
@@ -369,25 +371,81 @@ export default function App() {
               </div>
             </>
           ) : pagina === 'empleados' ? (
-            <section className="panel">
-              <div className="panel-heading wrap-heading"><div><div className="eyebrow">DIRECTORIO</div><h2>Empleados autorizados</h2><p>{listado.length} resultados visibles {cargando ? '· Actualizando…' : ''}</p>{mensajeEmpleado && <p role="status" className="employee-success">{mensajeEmpleado}</p>}</div>
-                <div className="filters">{esAdmin && <button type="button" className="button primary small" onClick={() => { setMensajeEmpleado(''); setMostrarNuevoEmpleado(true); }}>+ Registrar empleado</button>}<input aria-label="Buscar empleados" value={busqueda} placeholder="Buscar nombre, código o cargo…" onChange={e => setBusqueda(e.target.value)}/><select aria-label="Filtrar por departamento" value={filtro} onChange={e => setFiltro(e.target.value)}><option value="">Todos los departamentos permitidos</option>{departamentos.map(d => <option key={d.id_departamento} value={d.id_departamento}>{d.nombre}</option>)}</select></div>
+            <section className="panel employee-directory">
+              <div className="panel-heading wrap-heading">
+                <div>
+                  <div className="eyebrow">DIRECTORIO</div>
+                  <h2>Personal hospitalario</h2>
+                  <p>{listado.length} resultados visibles {cargando ? '· Actualizando…' : ''}</p>
+                  {mensajeEmpleado && <p role="status" className="employee-success">{mensajeEmpleado}</p>}
+                </div>
+                <div className="employee-toolbar">
+                  <label className="employee-search">
+                    <span className="sr-only">Buscar empleados</span>
+                    <input type="search" value={busqueda} placeholder="Nombre, código o cargo…"
+                      onChange={e => setBusqueda(e.target.value)} />
+                  </label>
+                  <button className={'button ghost small employee-filter-toggle' + (filtro ? ' has-filter' : '')}
+                    type="button" aria-expanded={mostrarFiltros} aria-controls="employee-filter-options"
+                    onClick={() => setMostrarFiltros(v => !v)}>☷ Filtros{filtro ? ' · 1' : ''}</button>
+                  {esAdmin && <button type="button" className="button primary small employee-create-button"
+                    onClick={() => {setMensajeEmpleado('');setMostrarNuevoEmpleado(true);}}>+ Registrar empleado</button>}
+                </div>
               </div>
-              <div className="table-wrap"><table><thead><tr><th>Código</th><th>Nombre completo</th><th>Cargo</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
-                {listado.map(e => <tr key={e.id_empleado}><td className="mono">{e.codigo_empleado}</td><td><strong>{e.nombres} {e.apellidos}</strong></td><td>{e.cargo}</td><td><Estado estado={e.estado_vinculo}/></td><td><button type="button" className="text-button" onClick={() => abrirEmpleado(e.id_empleado)}>Ver detalle →</button></td></tr>)}
-                {listado.length === 0 && <tr><td colSpan={5} className="no-rows">No hay empleados que coincidan con los filtros.</td></tr>}
-              </tbody></table></div>
-              <div className="table-footer">Se muestran como máximo 100 registros por consulta. No se presentan datos personales sensibles.</div>
+              {mostrarFiltros && <div id="employee-filter-options" className="employee-filter-panel">
+                <label>Departamento
+                  <select value={filtro} onChange={e => setFiltro(e.target.value)}>
+                    <option value="">Todos los departamentos permitidos</option>
+                    {departamentos.map(d => <option key={d.id_departamento} value={d.id_departamento}>{d.nombre}</option>)}
+                  </select>
+                </label>
+                <button type="button" className="text-button" onClick={() => {setFiltro('');setMostrarFiltros(false);}}>Limpiar filtros</button>
+              </div>}
+              <div className="table-wrap employee-desktop-table"><table>
+                <thead><tr><th>Código</th><th>Nombre completo</th><th>Cargo</th><th>Estado</th><th>Acción</th></tr></thead>
+                <tbody>
+                  {listado.map(e => <tr key={e.id_empleado}>
+                    <td className="mono">{e.codigo_empleado}</td>
+                    <td><div className="employee-name-cell"><AvatarEmpleado empleado={e}/><strong>{e.nombres} {e.apellidos}</strong></div></td>
+                    <td>{e.cargo}</td><td><Estado estado={e.estado_vinculo}/></td>
+                    <td><button type="button" className="text-button" onClick={() => abrirEmpleado(e.id_empleado)}>Ver detalle →</button></td>
+                  </tr>)}
+                  {listado.length === 0 && <tr><td colSpan={5} className="no-rows">No hay empleados que coincidan con los filtros.</td></tr>}
+                </tbody>
+              </table></div>
+              <div className="mobile-employee-list">
+                {listado.map(e => <article className="employee-mobile-card" key={e.id_empleado}>
+                  <AvatarEmpleado empleado={e}/>
+                  <div className="employee-mobile-main">
+                    <strong>{e.nombres} {e.apellidos}</strong>
+                    <span className="employee-mobile-code">{e.codigo_empleado}</span>
+                    <span className="employee-mobile-role">{e.cargo}</span>
+                    <div className="employee-mobile-bottom">
+                      <Estado estado={e.estado_vinculo}/>
+                      <button type="button" className="text-button" onClick={() => abrirEmpleado(e.id_empleado)}>
+                        Ver detalle <span aria-hidden="true">→</span>
+                      </button>
+                    </div>
+                  </div>
+                </article>)}
+                {listado.length === 0 && <div className="employee-mobile-empty">No hay empleados que coincidan con tu búsqueda.</div>}
+              </div>
+              <div className="table-footer">Hasta 100 empleados por consulta. DUI y datos de contacto solo visibles para la administración.</div>
             </section>
           ) : pagina === 'turnos' ? (
             <Turnos token={token} departamentos={departamentos} onSesionExpirada={cerrarSesion} />
           ) : (
             <div className="departments-grid">
-              {departamentos.map(d => <article className="department-card" key={d.id_departamento}><div className="dept-symbol">✚</div><div className="eyebrow">{d.codigo}</div><h2>{d.nombre}</h2><p>Área hospitalaria autorizada para este perfil.</p><button type="button" className="button secondary" onClick={() => abrirDepartamento(d.id_departamento)}>Ver personal adscrito <span>→</span></button></article>)}
+              {departamentos.map(d => <article className="department-card department-card-detailed" key={d.id_departamento}>
+                <div className="dept-card-top"><div className="dept-symbol">✚</div><span className="eyebrow">{d.codigo}</span></div>
+                <h2>{d.nombre}</h2><p className="dept-location">{d.ubicacion || 'Ubicación no definida'}</p>
+                <div className="dept-staff-count"><strong>{d.empleados_activos ?? '—'}</strong><span>empleados activos</span></div>
+                <button type="button" className="button secondary" onClick={() => abrirDepartamento(d.id_departamento)}>Consultar personal <span aria-hidden="true">→</span></button>
+              </article>)}
               {departamentos.length === 0 && <div className="empty">No hay departamentos disponibles para este usuario.</div>}
             </div>
           )}
-          <footer className="footer">SIGPMAT · Universidad de El Salvador · Proyecto académico 2026 <span>v0.3 — Interfaz web</span></footer>
+          <footer className="footer">SIGPMAT · Universidad de El Salvador · Proyecto académico 2026 <span>Demostración académica · Datos ficticios</span></footer>
         </div>
       </main>
 
@@ -397,8 +455,18 @@ export default function App() {
         <section role="dialog" aria-modal="true" aria-label={detalle ? 'Detalle del empleado' : 'Detalle del departamento'} className="drawer">
           <div className="drawer-header"><span className="eyebrow">DETALLE DE REGISTRO</span><button type="button" className="icon-btn" aria-label="Cerrar detalle" onClick={() => {setDetalle(null);setDetalleArea(null);}}>✕</button></div>
           {detalle ? <>
-            <div className="drawer-title"><div className="big-avatar">{detalle.empleado.nombres.charAt(0)}{detalle.empleado.apellidos.charAt(0)}</div><div><h2>{detalle.empleado.nombres} {detalle.empleado.apellidos}</h2><p>{detalle.empleado.codigo_empleado}</p></div></div>
-            <dl className="detail-grid"><div><dt>Cargo</dt><dd>{detalle.empleado.cargo}</dd></div><div><dt>Estado</dt><dd><Estado estado={detalle.empleado.estado_vinculo}/></dd></div><div><dt>Fecha de ingreso</dt><dd>{detalle.empleado.fecha_ingreso || 'No registrada'}</dd></div><div><dt>Departamento(s)</dt><dd>{detalle.empleado.departamentos?.map(d => d.nombre).join(', ') || 'Sin adscripción vigente'}</dd></div></dl>
+            <div className="drawer-title"><AvatarEmpleado empleado={detalle.empleado} size="grande"/><div><h2>{detalle.empleado.nombres} {detalle.empleado.apellidos}</h2><p>{detalle.empleado.codigo_empleado}</p></div></div>
+            <dl className="detail-grid"><div><dt>Cargo</dt><dd>{detalle.empleado.cargo}</dd></div>
+                <div><dt>Estado</dt><dd><Estado estado={detalle.empleado.estado_vinculo}/></dd></div>
+                <div><dt>Fecha de ingreso</dt><dd>{detalle.empleado.fecha_ingreso || 'No registrada'}</dd></div>
+                <div><dt>Departamento(s)</dt><dd>{detalle.empleado.departamentos?.map(d => d.nombre).join(', ') || 'Sin adscripción vigente'}</dd></div>
+                {esAdmin && <>
+                  <div><dt>DUI (ficticio en demo)</dt><dd>{detalle.empleado.dui || 'No registrado'}</dd></div>
+                  <div><dt>Teléfono</dt><dd>{detalle.empleado.telefono || 'No registrado'}</dd></div>
+                  <div><dt>Correo de contacto</dt><dd>{detalle.empleado.correo_contacto || 'No registrado'}</dd></div>
+                  <div><dt>Registro profesional</dt><dd>{detalle.empleado.numero_registro_profesional || 'No registrado'}</dd></div>
+                </>}
+              </dl>
             <div className="divider"/>
             <h3>Especialidades acreditadas</h3>
             {detalle.especialidades.length ? <div className="specialties">{detalle.especialidades.map(a => <div key={a.id_empleado_especialidad} className="specialty"><strong>{a.nombre}</strong><span>{a.codigo} · Desde {a.vigente_desde}{a.vigente_hasta ? ' hasta ' + a.vigente_hasta : ''}</span></div>)}</div> : <p className="muted">Sin acreditaciones registradas.</p>}
