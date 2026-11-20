@@ -269,7 +269,8 @@ export default function App() {
         type="button" aria-label="Cerrar menú de navegación" tabIndex={menuMovilAbierto ? 0 : -1}
         onClick={() => setMenuMovilAbierto(false)} />
       <aside ref={menuRef} id="sigpmat-menu" className={'sidebar' + (menuMovilAbierto ? ' sidebar-open' : '')}
-        aria-label="Menú principal">
+        aria-label="Menú principal" role={menuMovilAbierto ? 'dialog' : undefined}
+        aria-modal={menuMovilAbierto ? true : undefined}>
         <div className="sidebar-top">
           <div className="sidebar-brand-row">
             <div className="brand-lockup"><div className="brand-symbol">✚</div><span>SIGPMAT <small>GESTIÓN HOSPITALARIA</small></span></div>
@@ -299,7 +300,7 @@ export default function App() {
         </div>
       </aside>
 
-      <main className="main">
+      <main className="main" inert={menuMovilAbierto}>
         <header className="topbar">
           <div className="mobile-topbar">
             <button type="button" className="mobile-header-button" aria-label="Abrir menú de navegación"
