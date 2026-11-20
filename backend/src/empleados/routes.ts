@@ -3,9 +3,9 @@ import { pool } from '../db.js';
 import { autorizar } from '../auth/routes.js';
 
 /**
- * SIGPMAT v0.4: consulta/alta mínima de personal.
- * No incluir DUI, correo personal ni teléfono en estas respuestas.
- * Las reglas de visibilidad se comprueban SIEMPRE en SQL, no solo en la UI.
+ * Datos laborales y fotografía opcional de demostración.
+ * Las listas NO revelan DUI ni contactos. El detalle solo muestra esos campos
+ * a ADMIN_GENERAL. La visibilidad se verifica en SQL y en la autorización.
  */
 type Cuenta = { id_usuario: string; roles: string[] };
 type Parametros = { id: string };
@@ -17,9 +17,15 @@ type EmpleadoListado = {
   apellidos: string;
   cargo: string;
   estado_vinculo: string;
+  foto_url: string | null;
+  foto_data_url: string | null;
 };
 type EmpleadoDetalle = EmpleadoListado & {
   fecha_ingreso: string | null;
+  dui: string | null;
+  correo_contacto: string | null;
+  telefono: string | null;
+  numero_registro_profesional: string | null;
   departamentos: Array<{ id_departamento: string; codigo: string; nombre: string }>;
 };
 type NuevoEmpleado = {
@@ -29,7 +35,32 @@ type NuevoEmpleado = {
   id_cargo: string;
   id_departamento: string;
   fecha_ingreso?: string;
+  dui?: string;
+  correo_contacto?: string;
+  telefono?: string;
+  numero_registro_profesional?: string;
+  foto_mime?: 'image/jpeg' | 'image/png' | 'image/webp';
+  foto_base64?: string;
 };
+
+function validarFoto(mime?: string, base64?: string): Buffer | null {
+  if (!mime && !base64) return null;
+  if (!mime || !base64 || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) {
+    throw new Error('Imagen inválida: se necesita un JPG, PNG o WebP válido');
+  }
+  const bytes = Buffer.from(base64, 'base64');
+  if (bytes.length < 12 || bytes.length > 200000 ||
+      bytes.toString('base64') !== base64) {
+    throw new Error('La fotografía debe ocupar un máximo de 200 kB');
+  }
+  const jpeg = mime === 'image/jpeg' && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  const png = mime === 'image/png' && bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+  const webp = mime === 'image/webp' && bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP';
+  if (!jpeg && !png && !webp) {
+    throw new Error('Tipo de imagen no compatible con el contenido');
+  }
+  return bytes;
+}
 
 const PG_BIGINT_MAX = 9223372036854775807n;
 const ID = '^[1-9][0-9]{0,18}$';
@@ -133,7 +164,10 @@ export function registrarRutasEmpleados(app: FastifyInstance): void {
 
       const { rows } = await pool.query<EmpleadoListado>(
         `SELECT e.id_empleado::text, e.codigo_empleado, e.nombres, e.apellidos,
-                c.nombre AS cargo, e.estado_vinculo
+                c.nombre AS cargo, e.estado_vinculo, e.foto_url,
+                CASE WHEN e.foto_bytes IS NULL THEN NULL
+                     ELSE 'data:' || e.foto_mime || ';base64,' || encode(e.foto_bytes, 'base64')
+                END AS foto_data_url
            FROM sigpmat.empleados e
            JOIN sigpmat.cargos c ON c.id_cargo = e.id_cargo
           WHERE (
@@ -193,14 +227,22 @@ export function registrarRutasEmpleados(app: FastifyInstance): void {
       if (!await esEmpleadoVisible(auth.cuenta, id)) {
         return reply.code(404).send({ error: 'Empleado no encontrado' });
       }
-      const { rows } = await pool.query<EmpleadoListado & { fecha_ingreso: string | null }>(
+      const { rows } = await pool.query<Omit<EmpleadoDetalle, 'departamentos'>>(
         `SELECT e.id_empleado::text, e.codigo_empleado, e.nombres,
                 e.apellidos, c.nombre AS cargo, e.estado_vinculo,
-                to_char(e.fecha_ingreso, 'YYYY-MM-DD') AS fecha_ingreso
+                to_char(e.fecha_ingreso, 'YYYY-MM-DD') AS fecha_ingreso,
+                CASE WHEN $2::boolean THEN e.dui ELSE NULL END AS dui,
+                CASE WHEN $2::boolean THEN e.correo_contacto ELSE NULL END AS correo_contacto,
+                CASE WHEN $2::boolean THEN e.telefono ELSE NULL END AS telefono,
+                CASE WHEN $2::boolean THEN e.numero_registro_profesional ELSE NULL END AS numero_registro_profesional,
+                e.foto_url,
+                CASE WHEN e.foto_bytes IS NULL THEN NULL
+                     ELSE 'data:' || e.foto_mime || ';base64,' || encode(e.foto_bytes, 'base64')
+                END AS foto_data_url
            FROM sigpmat.empleados e
            JOIN sigpmat.cargos c ON c.id_cargo = e.id_cargo
           WHERE e.id_empleado = $1::bigint`,
-        [id]
+        [id, auth.admin]
       );
       if (!rows[0]) return reply.code(404).send({ error: 'Empleado no encontrado' });
 
@@ -248,7 +290,13 @@ export function registrarRutasEmpleados(app: FastifyInstance): void {
             apellidos: { type: 'string', minLength: 1, maxLength: 90 },
             id_cargo: { type: 'string', pattern: ID, maxLength: 19 },
             id_departamento: { type: 'string', pattern: ID, maxLength: 19 },
-            fecha_ingreso: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' }
+            fecha_ingreso: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+            dui: { type: 'string', pattern: '^[0-9]{8}-[0-9]$', maxLength: 10 },
+            correo_contacto: { type: 'string', minLength: 3, maxLength: 150 },
+            telefono: { type: 'string', pattern: '^[0-9]{4}-[0-9]{4}$', maxLength: 9 },
+            numero_registro_profesional: { type: 'string', minLength: 3, maxLength: 40 },
+            foto_mime: { type: 'string', enum: ['image/jpeg','image/png','image/webp'] },
+            foto_base64: { type: 'string', minLength: 16, maxLength: 280000 }
           }
         }
       }
@@ -263,6 +311,12 @@ export function registrarRutasEmpleados(app: FastifyInstance): void {
       }
       if (data.fecha_ingreso && !fechaValida(data.fecha_ingreso)) {
         return reply.code(400).send({ error: 'Fecha de ingreso invalida' });
+      }
+      let fotoBytes: Buffer | null;
+      try {
+        fotoBytes = validarFoto(data.foto_mime, data.foto_base64);
+      } catch (error) {
+        return reply.code(400).send({ error: error instanceof Error ? error.message : 'Foto inválida' });
       }
       const nombres = data.nombres.trim();
       const apellidos = data.apellidos.trim();
@@ -284,11 +338,14 @@ export function registrarRutasEmpleados(app: FastifyInstance): void {
         }
         const { rows } = await client.query<{ id_empleado: string; codigo_empleado: string }>(
           `INSERT INTO sigpmat.empleados
-              (codigo_empleado, nombres, apellidos, id_cargo, fecha_ingreso, estado_vinculo)
-           VALUES ($1, $2, $3, $4::bigint, $5::date, 'activo')
+              (codigo_empleado, nombres, apellidos, id_cargo, fecha_ingreso, estado_vinculo,
+               dui, correo_contacto, telefono, numero_registro_profesional, foto_mime, foto_bytes)
+           VALUES ($1, $2, $3, $4::bigint, $5::date, 'activo', $6, $7, $8, $9, $10, $11)
            RETURNING id_empleado::text, codigo_empleado`,
           [data.codigo_empleado.trim(), nombres, apellidos, data.id_cargo,
-           data.fecha_ingreso ?? null]
+           data.fecha_ingreso ?? null, data.dui ?? null, data.correo_contacto?.trim() ?? null,
+           data.telefono ?? null, data.numero_registro_profesional?.trim() ?? null,
+           fotoBytes ? data.foto_mime : null, fotoBytes]
         );
         const nuevo = rows[0];
         if (!nuevo) throw new Error('No se obtuvo el nuevo empleado');
@@ -304,7 +361,7 @@ export function registrarRutasEmpleados(app: FastifyInstance): void {
         try { await client.query('ROLLBACK'); } catch { /* conexión posiblemente cerrada */ }
         const codigo = (error as { code?: string } | null)?.code;
         if (codigo === '23505') {
-          return reply.code(409).send({ error: 'Codigo de empleado ya registrado' });
+          return reply.code(409).send({ error: 'Código de empleado, DUI o registro profesional ya registrado' });
         }
         request.log.error({ err: error }, 'No se pudo registrar el empleado');
         return reply.code(500).send({ error: 'No se pudo registrar el empleado' });
