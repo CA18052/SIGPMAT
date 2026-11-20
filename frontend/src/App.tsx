@@ -295,8 +295,14 @@ export default function App() {
         <div className="sidebar-profile">
           <span className="profile-avatar">{iniciales}</span>
           <div className="profile-copy"><strong>{sesion.usuario.nombre_usuario}</strong><span>{esAdmin ? 'Administrador general' : esJefe ? 'Jefe de área' : 'Personal médico'}</span></div>
-          <button ref={botonSalirRef} className="icon-btn exit" type="button" aria-label="Cerrar sesión"
-            title="Cerrar sesión" onClick={cerrarSesion}>↪</button>
+          <button ref={botonSalirRef} className="logout-button" type="button" onClick={cerrarSesion}>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+              strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <path d="m16 17 5-5-5-5M21 12H9" />
+            </svg>
+            <span>Cerrar sesión</span>
+          </button>
         </div>
       </aside>
 
