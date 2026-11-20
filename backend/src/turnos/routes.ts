@@ -47,7 +47,9 @@ async function rollback(client: PoolClient) {
 async function cuentaOperativa(request: FastifyRequest, reply: FastifyReply) {
   const usuario = await autorizar(request, reply);
   if (!usuario) return null;
-  if (!usuario.roles.includes('ADMIN_GENERAL') && !usuario.roles.includes('JEFE_AREA')) {
+  if (!usuario.roles.includes('ADMIN_GENERAL') &&
+      !usuario.roles.includes('JEFE_AREA') &&
+      !usuario.roles.includes('VISITANTE_LECTURA')) {
     reply.code(403).send({ error: 'Este rol no tiene acceso a turnos' });
     return null;
   }
@@ -155,7 +157,7 @@ export function registrarRutasTurnos(app: FastifyInstance): void {
       ORDER BY t.inicio_at DESC LIMIT 100
     `;
     const { rows } = await pool.query(sql, [
-      usuario.roles.includes('ADMIN_GENERAL'), usuario.id_usuario, busqueda
+      usuario.roles.includes('ADMIN_GENERAL') || usuario.roles.includes('VISITANTE_LECTURA'), usuario.id_usuario, busqueda
     ]);
     return { turnos: rows, limite: 100, busqueda };
   });
@@ -173,7 +175,8 @@ export function registrarRutasTurnos(app: FastifyInstance): void {
         "JOIN sigpmat.departamentos d ON d.id_departamento=t.id_departamento WHERE t.id_turno=$1::bigint",
         [id]
       );
-      if (!turno.rows[0] || !await areaAutorizada(usuario, turno.rows[0].id_departamento)) {
+      if (!turno.rows[0] || (!usuario.roles.includes('VISITANTE_LECTURA') &&
+          !await areaAutorizada(usuario, turno.rows[0].id_departamento))) {
         return reply.code(404).send({ error: 'Turno no encontrado' });
       }
       const requerimientos = await pool.query(
