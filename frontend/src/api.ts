@@ -104,10 +104,19 @@ export async function requestApi<T>(
     if(!proveedorConfirmacion)throw new ApiError(428,'La confirmación de contraseña no está disponible. Vuelve a abrir el sistema.');
     const contrasena=await proveedorConfirmacion({metodo,ruta});
     if(contrasena===null)throw new ApiError(0,'Operación cancelada. No se modificó ningún dato.');
-    const confirmado=await requestApi<{confirmacion:string}>(
-      '/api/auth/confirmar-operacion',token,{
-        method:'POST',body:JSON.stringify({contrasena,metodo,ruta})
-      });
+    let confirmado:{confirmacion:string};
+    try {
+      confirmado=await requestApi<{confirmacion:string}>(
+        '/api/auth/confirmar-operacion',token,{
+          method:'POST',body:JSON.stringify({contrasena,metodo,ruta})
+        });
+    }catch(e){
+      // Contraseña equivocada no significa sesión vencida: no cerrar la cuenta.
+      if(e instanceof ApiError && e.status===401 && /contraseña/i.test(e.message)){
+        throw new ApiError(422,e.message);
+      }
+      throw e;
+    }
     headers.set('X-SIGPMAT-Confirmacion',confirmado.confirmacion);
   }
 
