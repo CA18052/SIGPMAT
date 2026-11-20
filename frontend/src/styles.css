@@ -395,3 +395,48 @@
   .user-admin-actions{width:100%;display:grid;grid-template-columns:minmax(0,1fr)}
   .user-admin-actions .button{width:100%;justify-content:center}
 }
+
+/* Paquete 06: alta por carnet, confirmación de acciones y auditoría privada */
+.public-signup{display:grid;gap:12px}
+.public-signup h2{font-size:29px;margin:0}
+.public-signup .login-form{gap:13px}
+.signup-hint{font-size:11px;color:#7c7180;font-weight:400;line-height:1.55;display:block}
+.public-signup .button{min-height:46px;justify-content:center}
+.public-signup .field input{font-size:16px}
+.reauth-overlay{z-index:2200;display:flex;align-items:center;justify-content:center;padding:16px}
+.reauth-dialog{width:min(460px,100%);background:#fff;border:1px solid #e9dde4;
+  box-shadow:0 20px 70px #29162830;border-radius:20px;padding:29px;display:grid;gap:14px;max-height:90dvh;overflow:auto}
+.reauth-symbol{height:47px;width:47px;display:grid;place-items:center;background:#723450;color:white;border-radius:13px;font-size:21px}
+.reauth-dialog h2{font-size:25px;margin:0}
+.reauth-dialog p{font-size:13px;color:#746674;line-height:1.6;margin:0}
+.reauth-dialog form{display:grid;gap:18px}
+.reauth-dialog label{display:grid;gap:8px;font-size:12px;font-weight:750;color:#463444}
+.reauth-dialog input{padding:13px;border:1px solid #dfd6dd;border-radius:10px;width:100%;min-height:47px;font-size:16px}
+.reauth-dialog input:focus-visible{outline:3px solid #e5b2ca;outline-offset:2px}
+.reauth-actions{display:flex;gap:9px;justify-content:flex-end}
+.reauth-actions button{min-height:45px;justify-content:center}
+.reauth-dialog small{font-size:11px;color:#8c7d88;line-height:1.5}
+.audit-panel .panel-heading{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between}
+.audit-panel .panel-heading>.button{min-height:44px}
+.audit-route{font-size:11px;word-break:break-word}
+.audit-empty{padding:20px 25px;color:#766b75;font-size:13px}
+.audit-foot{border-top:1px solid #f2edf1;padding:13px 22px;margin:0;color:#857782;font-size:11px}
+.audit-mobile{display:none}
+.audit-card{padding:15px;border-bottom:1px solid #eee7ed;display:grid;gap:7px;font-size:12px;color:#554653}
+.audit-card-heading{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
+.audit-card-heading>span,.audit-card small{font-size:11px;color:#827580}
+.employee-filter-panel{display:flex;align-items:end;flex-wrap:wrap;gap:12px;padding:17px 22px}
+.employee-filter-panel>label{display:grid;gap:6px;min-width:170px;flex:1;font-size:12px;font-weight:700;color:#594956}
+.employee-filter-panel select{width:100%;background:#fff;border:1px solid #e3dbe0;color:#342b34;min-height:44px;border-radius:10px;padding:9px 11px}
+.employee-filter-panel>.text-button{min-height:44px;align-self:end}
+@media(max-width:760px){
+ .reauth-dialog{padding:22px 18px;border-radius:15px}
+ .reauth-actions{display:grid;grid-template-columns:1fr 1fr}
+ .reauth-actions button{font-size:12px}
+ .audit-desktop{display:none}
+ .audit-mobile{display:block}
+ .audit-panel .panel-heading>.button{width:100%;justify-content:center}
+ .employee-filter-panel{display:grid;grid-template-columns:1fr;gap:12px;padding:16px}
+ .employee-filter-panel>label{min-width:0;width:100%}
+ .employee-filter-panel select{font-size:16px}
+}
