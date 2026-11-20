@@ -1,0 +1,27 @@
+name: SIGPMAT - Smoke publico de solo lectura
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/verificar_api_publica.mjs'
+      - '.github/workflows/smoke-publico.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar-publicacion:
+    name: HTTP publico y rutas protegidas
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Comprobar demo publica sin credenciales ni cambios de datos
+        env:
+          SIGPMAT_BASE_URL: https://sigpmat-demo.onrender.com
+        run: node scripts/verificar_api_publica.mjs
