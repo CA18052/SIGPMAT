@@ -149,7 +149,7 @@ export function registrarRutasAutenticacion(app: FastifyInstance): void {
         `SELECT id_usuario::text, nombre_usuario, estado, contrasena_hash,
                  nombre_mostrado, tipo_cuenta, es_superadministrador,
                  debe_cambiar_contrasena, sesion_version
-           FROM sigpmat.usuarios WHERE nombre_usuario = $1`,
+           FROM sigpmat.usuarios WHERE lower(nombre_usuario) = lower($1)`,
         [nombre_usuario.trim()]
       );
       const account = rows[0];
