@@ -686,3 +686,43 @@
   .aura-message.from-aura{max-width:100%}
 }
 @media print{.aura-rich-text{overflow:visible}}
+
+/* Diálogo de revisión propio: sustituye window.confirm, con navegación por teclado. */
+.aura-window{position:relative}
+.aura-review-layer{
+  position:absolute;z-index:10;inset:0;display:flex;align-items:center;
+  justify-content:center;overflow-y:auto;padding:18px;background:#281e2bd4;
+  backdrop-filter:blur(6px)
+}
+.aura-review-dialog{
+  width:min(425px,100%);max-height:100%;overflow:auto;
+  display:grid;justify-items:start;gap:13px;background:#fff;border-radius:19px;
+  border:1px solid #f4e6ee;padding:27px;
+  box-shadow:0 25px 75px #1e122147
+}
+.aura-review-icon{width:44px;height:44px;display:grid;place-items:center;border-radius:13px;
+  background:#f0dfea;color:#824566;font-size:22px;font-weight:800}
+.aura-review-dialog h2{font-size:23px;line-height:1.2;color:#342637;margin:0;
+  letter-spacing:-.025em}
+.aura-review-dialog>p{line-height:1.7;font-size:13px;color:#423440;margin:0;
+  overflow-wrap:anywhere;max-width:100%}
+.aura-review-security{border:1px solid #ebdce6;background:#fcf8fb;border-radius:12px;
+  padding:13px 14px;display:grid;gap:5px;width:100%}
+.aura-review-security strong{font-size:12px;color:#69445c}
+.aura-review-security span{font-size:11px;line-height:1.65;color:#776875}
+.aura-review-actions{display:flex;align-items:center;justify-content:stretch;
+  width:100%;flex-wrap:wrap;gap:10px}
+.aura-review-actions button{min-height:46px;border-radius:11px;flex:1 1 145px;
+  font-weight:750;font-size:11px}
+.aura-review-cancel{background:#fff;border:1px solid #decfd9;color:#514352;
+  padding:11px 13px;cursor:pointer}
+.aura-review-cancel:hover{background:#f8f2f6}
+.aura-review-cancel:focus-visible{outline:3px solid #b57698;outline-offset:3px}
+.aura-review-dialog .aura-approve{padding:11px 13px}
+@media(max-width:760px){
+  .aura-review-layer{padding:16px;align-items:center}
+  .aura-review-dialog{padding:21px 18px}
+  .aura-review-dialog h2{font-size:21px}
+  .aura-review-actions{display:grid;grid-template-columns:1fr}
+  .aura-review-actions button{width:100%;min-height:48px}
+}
