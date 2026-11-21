@@ -31,3 +31,5 @@ jobs:
         run: npm run build
       - name: Probar persistencia y expiración de sesión
         run: npm run test:session
+      - name: Probar respuestas Markdown seguras de AURA
+        run: npm run test:aura-markdown

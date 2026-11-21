@@ -90,9 +90,20 @@
 - **Propuesta de demostración:** consultar disponibilidad de un profesional, preparar turno futuro, explicar el borrador, aprobar con contraseña, consultar candidatos, aprobar una asignación y verificar cobertura + auditoría. Para repetir en vivo, utilizar un **nuevo turno de ensayo**: el #28 ya está cubierto y no debe reutilizarse para otra asignación.
 - **Alcance verificado:** pruebas reales de consulta, propuesta, creación y asignación; no declarar automáticamente probadas las restantes rutas de AURA (p. ej., alta de empleados), la seguridad completa ante ataques o la exportación PDF.
 
+## Paquete 10 — Acabado profesional, accesibilidad y precisión de AURA
+
+- **Lectura de respuestas enriquecidas:** tablas Markdown con desplazamiento horizontal, listas, citas, encabezados, negritas y código en AURA; no se interpreta HTML ni se ejecutan enlaces/imágenes remotas del modelo.
+- **Diseño móvil:** cabecera compacta mientras se conversa, sugerencias únicamente al iniciar, horas individuales de los mensajes y respuesta desplazable.
+- **Propuestas temporales:** estado de ejecución/caducidad, contador de vencimiento y botón deshabilitado al expirar, sujeto siempre a verificación final del servidor.
+- **Revisión antes de ejecutar:** diálogo accesible dentro de AURA con cancelación, navegación por teclado y aprobación explícita, seguida por la contraseña del Paquete 06.
+- **Precisión:** diferenciar «elegible sin restricciones registradas» de «disponibilidad confirmada», no confundir turnos recientes con conflictos, y mostrar prioridad efectiva, especialidad real y fechas legibles en propuestas.
+- **Pruebas de CI:** nuevas pruebas de reconocimiento Markdown, más compilación frontend y regresión backend. La validación visual en Safari y pruebas E2E quedan señaladas por separado hasta ejecutarlas.
+- **Guion sugerido:** mostrar una consulta con tabla visual, pedir disponibilidad con criterios, preparar propuesta y cancelar sin guardar; explicar la confirmación y la auditoría usando la evidencia real del turno #28 y asignación #37.
+- **Documento:** `docs/PAQUETE_10_PULIDO_Y_CALIDAD.md`.
+
 ## Plan de funciones próximas: NO IMPLEMENTADAS
 
 - **Render:** despliegues automáticos desde GitHub comprobados; conservar configuración `After CI Checks Pass` mientras el propietario así lo desee.
-- **Paquete 10:** pulido visual, accesibilidad, pruebas de regresión y cierre de la defensa.
+- **Regresión final:** pendiente validar visualmente Safari móvil, exportación PDF/CSV y las rutas administrativas no ensayadas.
 
 **Regla de exactitud del guion final:** separar el recorrido de funciones comprobadas de las propuestas, registrar la versión Live de Render y no inventar cuentas, pantallas, respuestas de IA, métricas ni resultados de pruebas.

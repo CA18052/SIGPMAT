@@ -13,6 +13,10 @@ const esAdmin=(u:ActorAura)=>u.roles.includes('ADMIN_GENERAL');
 const fechaHora=(s:string)=>/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?-06:00$/.test(s)
   && Number.isFinite(Date.parse(s));
 const error=(mensaje:string)=>({error:mensaje});
+const fechaLocal=(iso:string)=>new Date(iso).toLocaleString('es-SV',{
+  timeZone:'America/El_Salvador',day:'2-digit',month:'2-digit',year:'numeric',
+  hour:'2-digit',minute:'2-digit',hour12:true
+});
 
 async function areaPermitida(u:ActorAura,id:string,escritura:boolean){
   if(escritura && !puedeEscribir(u))return false;
@@ -108,9 +112,19 @@ async function disponibles(ctx:ContextoAura,a:Argumentos){
           AND ex.inicio_at<$4::timestamptz AND ex.fin_at>$3::timestamptz)
     ORDER BY turnos_recientes,e.apellidos,e.nombres LIMIT 12
   `,[dep,cargo,inicio,fin,esp]);
-  return {departamento:dep,cargo,horario:{inicio,fin},
-    candidatos:rows,criterio:'Elegibles por registros actuales; las reglas se validan otra vez al asignar.',
-    advertencia:'Sin conflicto registrado no garantiza disponibilidad física ni reemplaza la confirmación del profesional.'};
+  return {departamento:dep,cargo,
+    especialidad_requerida:esp,
+    horario:{inicio,fin},
+    candidatos:rows,
+    estado:'ELEGIBLE_SEGUN_RESTRICCIONES_REGISTRADAS',
+    verificaciones:[
+      'Vínculo laboral activo, cargo y departamento compatibles durante el intervalo',
+      esp?'Acreditación vigente para la especialidad requerida':'Sin especialidad específica exigida',
+      'Sin asignaciones que se solapen con el horario solicitado',
+      'Sin ausencias aprobadas ni excepciones no disponible para el intervalo'
+    ],
+    advertencia:'No se ha consultado ni confirmado una ventana declarada de disponibilidad del profesional. La ausencia de conflictos registrados NO garantiza disponibilidad física; validar antes de asignar.',
+    nota:'turnos_recientes representa carga en la ventana de 30 días, NO un recuento de conflictos.'};
 }
 
 async function prepararTurno(ctx:ContextoAura,a:Argumentos){
@@ -128,18 +142,34 @@ async function prepararTurno(ctx:ContextoAura,a:Argumentos){
     return error('Faltan datos o son inválidos. Solicita departamento, cargo, jornada, inicio, fin exactos en zona -06:00 y cupos. No inventes valores.');
   if(!await areaPermitida(ctx.usuario,dep,true))
     return error('No tienes permiso de gestionar ese departamento.');
-  const {rows}=await pool.query<{departamento:string;cargo:string}>(
-    `SELECT d.nombre AS departamento,c.nombre AS cargo FROM sigpmat.departamentos d
-      CROSS JOIN sigpmat.cargos c WHERE d.id_departamento=$1::bigint AND d.activo
-      AND c.id_cargo=$2::bigint AND c.activo`,[dep,cargo]);
-  if(!rows[0])return error('Departamento o cargo no existe o está inactivo.');
+  const {rows}=await pool.query<{
+    departamento:string;cargo:string;especialidad:string|null
+  }>(
+    `SELECT d.nombre AS departamento,c.nombre AS cargo,sp.nombre AS especialidad
+       FROM sigpmat.departamentos d CROSS JOIN sigpmat.cargos c
+       LEFT JOIN sigpmat.especialidades sp ON sp.id_especialidad=$3::bigint
+       WHERE d.id_departamento=$1::bigint AND d.activo
+         AND c.id_cargo=$2::bigint AND c.activo
+         AND ($3::bigint IS NULL OR sp.activo=TRUE)`,[dep,cargo,esp??null]);
+  if(!rows[0])return error('Departamento, cargo o especialidad no existen o están inactivos.');
   const datos={id_departamento:dep,id_cargo:cargo,id_especialidad:esp??null,
     tipo_turno:tipo,inicio_at:inicio,fin_at:fin,
     cupos_requeridos:cupos,prioridad};
+  const detalle={departamento:rows[0].departamento,cargo:rows[0].cargo,
+    especialidad:rows[0].especialidad,tipo_turno:tipo,
+    inicio:fechaLocal(inicio),fin:fechaLocal(fin),
+    cupos_requeridos:cupos,prioridad};
+  const plazas=cupos===1?'1 plaza de ':' '+cupos+' plazas de ';
+  const resumen='Crear turno '+tipo+' de '+rows[0].departamento+' para '+
+    plazas.trimStart()+rows[0].cargo+
+    (rows[0].especialidad?' (especialidad: '+rows[0].especialidad+')':'')+
+    '. Inicio: '+fechaLocal(inicio)+' · Fin: '+fechaLocal(fin)+
+    ' · Prioridad: '+prioridad+'.';
   return {propuesta:crearPropuesta(ctx.usuario.id_usuario,'crear_turno','/api/turnos',datos,
-    'Crear turno '+tipo+' de '+rows[0].departamento+' para '+cupos+' '+rows[0].cargo+
-    '(s). Inicio: '+inicio+' · Fin: '+fin+'.'),
-    mensaje:'Propuesta preparada, SIN guardar. El usuario debe revisarla y confirmar su contraseña. Las asignaciones se propondrán después de crear el turno.'};
+    resumen),
+    detalle,
+    mensaje:'Propuesta preparada sin guardar. Prioridad efectiva: '+prioridad+
+      '. El usuario debe revisarla y confirmar su contraseña. Las asignaciones se propondrán después de crear el turno.'};
 }
 
 async function prepararEmpleado(ctx:ContextoAura,a:Argumentos){
