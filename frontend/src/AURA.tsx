@@ -8,7 +8,7 @@ type Propuesta={
 };
 type Mensaje={id:number;rol:'usuario'|'aura';contenido:string;
   propuesta?:Propuesta;completada?:boolean};
-type Estado={habilitada:boolean;modelo:string|null;mensaje:string};
+type Estado={habilitada:boolean;modelo:string|null;proveedor?:string;mensaje:string};
 type Chat={respuesta:string;modelo:string;propuesta:Propuesta|null;aviso:string};
 type Ejecucion={ejecutado:boolean;tipo:string;resumen:string;
   resultado:Record<string,unknown>;mensaje:string};
@@ -134,9 +134,10 @@ export default function AURA({
       </div>
       <div className="aura-scroll" aria-live="polite" aria-relevant="additions">
         {estado&&!estado.habilitada&&<div role="status" className="aura-config-alert">
-          <strong>Falta conectar el motor de inteligencia artificial</strong>
-          <p>Para activar AURA, el administrador debe configurar la variable privada
-            <code> OPENAI_API_KEY </code> en Render y publicar el servicio. No se simularán respuestas de IA.</p>
+          <strong>Conecta AURA con GroqCloud gratis</strong>
+          <p>Para activar el asistente sin pagar la API de OpenAI, configura
+            <code> GROQ_API_KEY </code> en las variables privadas de Render.
+            No se mostrarán respuestas simuladas.</p>
         </div>}
         {mensajes.map(m=><article key={m.id} className={'aura-message '+(m.rol==='usuario'?'from-user':'from-aura')}>
           {m.rol==='aura'&&<span className="aura-message-avatar" aria-hidden="true">✧</span>}

@@ -1,10 +1,35 @@
 # Paquete 09 — AURA, copiloto inteligente de SIGPMAT
 
+## Actualización — proveedor gratuito GroqCloud (noviembre 2026)
+
+**Decisión del equipo:** AURA utiliza **GroqCloud Free** por defecto, sin requerir pagos, tarjeta ni créditos de la API de OpenAI. El modelo predeterminado es `openai/gpt-oss-20b`, modelo de pesos abiertos servido por Groq, no por ChatGPT. Es una IA generativa real con llamadas a funciones. La cuota gratuita está limitada por solicitudes y tokens: consultar los límites vigentes de la cuenta Groq.
+
+**Compatibilidad:** Groq expone una implementación de Responses API con soporte para Function Calling, por lo que se preservan todas las funciones y controles de AURA. La implementación elimina el parámetro `store` al utilizar Groq porque su Responses API aún no lo admite. El historial se conserva solo en la sesión del frontend, como ya ocurría.
+
+**Variables privadas de Render:**
+- `GROQ_API_KEY`: obligatoria para el modo gratuito. Se genera en https://console.groq.com/keys y se introduce **solo** en Render → Environment.
+- `AURA_PROVEEDOR=groq`: predeterminada; puede omitirse si la instalación no tiene valor explícito.
+- `GROQ_MODEL=openai/gpt-oss-20b`: opcional, modelo predeterminado.
+- `OPENAI_API_KEY`: **no se utiliza** mientras el proveedor sea Groq. Solo se usa si se establece expresamente `AURA_PROVEEDOR=openai`, lo que puede generar facturación.
+
+**No existe fallback de pago**: si Groq no tiene clave o se agota su cuota gratuita, AURA muestra un error; nunca pasa automáticamente a OpenAI. Para continuar gratis, conservar la cuenta Groq en su plan Free y no ascender voluntariamente al plan Developer.
+
+**Prueba pendiente:** crear cuenta y clave Groq privada, desplegar, comprobar chat real y Function Calling en la web. Sin esa clave no puede afirmarse que la integración externa está probada. En bases médicas reales, revisar normas de privacidad y procesamiento antes de enviar datos a terceros.
+
+**Fuentes técnicas:**
+- Groq Responses API: https://console.groq.com/docs/responses-api
+- Groq Free Limits: https://console.groq.com/docs/rate-limits
+- Groq Tool Use: https://console.groq.com/docs/tool-use/local-tool-calling
+- Groq Privacy: https://console.groq.com/docs/your-data
+
+---
+
+
 Fecha: 20 de noviembre de 2026. Documentación técnica basada en el código integrado del proyecto.
 
 ## 1. Qué es AURA
 
-**AURA** significa *Asistente Unificado de Recursos y Asignaciones*. Es un copiloto en React que utiliza **OpenAI Responses API**, modelo predeterminado **`gpt-4.1-mini`** y **Function Calling** para solicitar operaciones expresamente autorizadas a Fastify. No es una conversación con ChatGPT Plus ni un modelo alojado en PostgreSQL.
+**AURA** significa *Asistente Unificado de Recursos y Asignaciones*. Es un copiloto en React que utiliza **Responses API compatible de GroqCloud**, modelo predeterminado **`openai/gpt-oss-20b`** y **Function Calling** para solicitar operaciones expresamente autorizadas a Fastify. No es una conversación con ChatGPT Plus ni un modelo alojado en PostgreSQL.
 
 - La interfaz muestra el acceso a AURA desde el menú y mediante un botón flotante, con diseño móvil.
 - El backend `backend/src/aura/routes.ts` expone:

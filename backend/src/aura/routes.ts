@@ -4,6 +4,8 @@ import { pool } from '../db.js';
 import { autorizar } from '../auth/routes.js';
 import { herramientasAura, ejecutarHerramientaAura } from './herramientas.js';
 import { verificarPropuesta } from './propuestas.js';
+import { seleccionarProveedorAura, cargaProveedorAura } from './proveedor.js';
+import type { ProveedorAura } from './proveedor.js';
 
 type Mensaje = {rol:'usuario'|'aura';contenido:string};
 type Solicitud={mensaje:string;historial?:Mensaje[]};
@@ -12,23 +14,22 @@ type Salida={type?:string;name?:string;arguments?:string;call_id?:string;
   content?:Array<{type?:string;text?:string}>};
 type RespuestaModelo={output?:Salida[];error?:{message?:string}};
 
-const API='https://api.openai.com/v1/responses';
-const MODELO=process.env.OPENAI_MODEL || 'gpt-4.1-mini';
-const habilitada=()=>Boolean(process.env.OPENAI_API_KEY?.trim());
 const textoFinal=(salida:Salida[])=>salida
   .filter(item=>item.type==='message')
   .flatMap(item=>item.content??[])
   .filter(item=>item.type==='output_text'&&typeof item.text==='string')
   .map(item=>item.text??'').join('\n').trim().slice(0,4200);
 
-async function llamarModelo(datos:Record<string,unknown>):Promise<RespuestaModelo>{
-  const respuesta=await fetch(API,{
+async function llamarModelo(
+  datos:Record<string,unknown>,proveedor:ProveedorAura
+):Promise<RespuestaModelo>{
+  const respuesta=await fetch(proveedor.endpoint,{
     method:'POST',
     headers:{
-      'Authorization':'Bearer '+process.env.OPENAI_API_KEY,
+      'Authorization':'Bearer '+proveedor.clave,
       'Content-Type':'application/json'
     },
-    body:JSON.stringify(datos),
+    body:JSON.stringify(cargaProveedorAura(datos,proveedor)),
     signal:AbortSignal.timeout(22000)
   });
   if(!respuesta.ok){
@@ -71,10 +72,14 @@ export function registrarRutasAura(app:FastifyInstance):void{
     reply.header('Cache-Control','no-store');
     const u=await autorizar(request,reply);
     if(!u)return reply;
-    return {habilitada:habilitada(),modelo:habilitada()?MODELO:null,
-      consultas:true,propuestas:true,ejecucion_supervisada:true,
-      mensaje:habilitada()?'AURA está preparada para responder.':
-        'AURA necesita configurar OPENAI_API_KEY en las variables privadas de Render.'};
+    const proveedor=seleccionarProveedorAura();
+    const elegido=process.env.AURA_PROVEEDOR?.trim().toLowerCase()||'groq';
+    return {habilitada:!!proveedor,modelo:proveedor?.modelo??null,
+      proveedor:elegido,consultas:true,propuestas:true,ejecucion_supervisada:true,
+      mensaje:proveedor?'Existe una clave configurada. Prueba una consulta para verificar su validez.':
+        elegido==='groq'
+          ? 'Activa AURA gratuitamente con GROQ_API_KEY en las variables privadas de Render.'
+          : 'Para usar OpenAI necesitas OPENAI_API_KEY y acceso API con facturación.'};
   });
 
   // Endpoint conversacional: se trata de CONSULTA (POST sin efecto en BD).
@@ -96,9 +101,12 @@ export function registrarRutasAura(app:FastifyInstance):void{
     if(!u)return reply;
     if(!u.roles.some(r=>['ADMIN_GENERAL','JEFE_AREA','VISITANTE_LECTURA'].includes(r)))
       return reply.code(403).send({error:'No tienes acceso al asistente.'});
-    if(!habilitada())return reply.code(503).send({
-      error:'AURA aún no tiene configurado un proveedor de IA.',
-      solucion:'El administrador debe configurar OPENAI_API_KEY en Render.'
+    const proveedor=seleccionarProveedorAura();
+    if(!proveedor)return reply.code(503).send({
+      error:'AURA aún no tiene configurado el proveedor de IA seleccionado.',
+      solucion:(process.env.AURA_PROVEEDOR?.trim().toLowerCase()||'groq')==='groq'
+        ? 'Configura GROQ_API_KEY en Render para utilizar la cuota gratuita de Groq.'
+        : 'Revisa OPENAI_API_KEY y la facturación de OpenAI Platform.'
     });
     const {mensaje,historial=[]}=request.body;
     if(datosSensibles(mensaje)||historial.some(m=>datosSensibles(m.contenido)))
@@ -122,11 +130,11 @@ export function registrarRutasAura(app:FastifyInstance):void{
     try{
       for(let ronda=0;ronda<5;ronda++){
         const r=await llamarModelo({
-          model:MODELO,store:false,parallel_tool_calls:false,
+          model:proveedor.modelo,parallel_tool_calls:false,
           max_output_tokens:850,
           instructions:instrucciones(u,fecha),
           input,tools:herramientasAura.map(t=>({...t,strict:false}))
-        });
+        },proveedor);
         const salida=r.output??[];
         const llamadas=salida.filter(t=>t.type==='function_call');
         if(llamadas.length===0){
@@ -167,15 +175,16 @@ export function registrarRutasAura(app:FastifyInstance):void{
         respuestaTexto=propuestas.length
           ? 'Preparé una propuesta para tu revisión. Todavía no se guardó ningún cambio.'
           : 'He consultado las funciones disponibles. Formula una pregunta más específica si necesitas otros datos.';
-      return {respuesta:respuestaTexto,propuesta:propuestas[0]??null,modelo:MODELO,
+      return {respuesta:respuestaTexto,propuesta:propuestas[0]??null,modelo:proveedor.modelo,
         aviso:'AURA usa información autorizada de SIGPMAT; verifica los datos antes de tomar decisiones.'};
     }catch(e){
       const msg=e instanceof Error?e.message:'PROVEEDOR';
       request.log.warn({causa:msg},'AURA no pudo completar la solicitud');
       const respuesta=msg==='CREDENCIAL'?
-        'La clave configurada para OpenAI no es válida o no tiene permisos.':
+        'La clave configurada para '+(proveedor.tipo==='groq'?'Groq':'OpenAI')+
+        ' no es válida o no tiene permisos.':
         msg==='LIMITE'?
-          'Se alcanzó el límite del proveedor de IA. Vuelve a intentarlo más tarde.':
+          'Se alcanzó la cuota gratuita o el límite del proveedor de IA. Vuelve a intentarlo más tarde. No se utilizará un proveedor de pago automáticamente.':
           'El proveedor de IA no está disponible temporalmente.';
       return reply.code(503).send({error:respuesta});
     }
