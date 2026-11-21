@@ -14,7 +14,6 @@ type Salida={type?:string;name?:string;arguments?:string;call_id?:string;
   content?:Array<{type?:string;text?:string}>};
 type RespuestaModelo={output?:Salida[];error?:{message?:string}};
 
-const habilitada=()=>Boolean(seleccionarProveedorAura());
 const textoFinal=(salida:Salida[])=>salida
   .filter(item=>item.type==='message')
   .flatMap(item=>item.content??[])
