@@ -10,6 +10,7 @@ import RegistroPublico from './RegistroPublico';
 import ConfirmacionOperacion from './ConfirmacionOperacion';
 import Auditoria from './Auditoria';
 import Reportes from './Reportes';
+import AURA from './AURA';
 import {
   actualizarUsuarioDeSesion, borrarSesionDePestana, guardarPaginaEnPestana,
   guardarSesionEnPestana, recuperarPaginaDePestana, recuperarSesionDePestana
@@ -145,6 +146,7 @@ export default function App() {
   const [formularioDepartamento, setFormularioDepartamento] = useState<Departamento | 'nuevo' | null>(null);
   const [mensajeDepartamento, setMensajeDepartamento] = useState('');
   const [mostrarCambioClave, setMostrarCambioClave] = useState(false);
+  const [auraAbierto, setAuraAbierto] = useState(false);
   const [solicitudOperacion, setSolicitudOperacion] = useState<SolicitudConfirmacion | null>(null);
   const resolverOperacion = useRef<((contrasena: string | null) => void) | null>(null);
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
@@ -430,7 +432,7 @@ export default function App() {
     borrarSesionDePestana();
     setMenuMovilAbierto(false);
     setSesion(null); setDetalle(null); setDetalleArea(null);
-    setMostrarNuevoEmpleado(false); setMensajeEmpleado(''); setMostrarCambioClave(false);
+    setMostrarNuevoEmpleado(false); setMensajeEmpleado(''); setMostrarCambioClave(false); setAuraAbierto(false);
     resolverOperacion.current?.(null);resolverOperacion.current=null;setSolicitudOperacion(null);
     setDepartamentos([]); setEmpleados([]); setPagina('resumen'); setFiltro(''); setFiltroCargo(''); setFiltroEstado(''); setBusqueda('');
   }
@@ -495,6 +497,13 @@ export default function App() {
               </button>
             ))}
           </nav>
+          <button type="button" className="nav-item aura-sidebar-link"
+            onClick={() => {setAuraAbierto(true);setMenuMovilAbierto(false);}}
+            aria-label="Abrir AURA, asistente de inteligencia artificial">
+            <span className="nav-glyph" aria-hidden="true">✧</span>
+            <span>AURA · Asistente IA</span>
+            <span className="aura-nav-spark" aria-hidden="true">✦</span>
+          </button>
           <div className="sidebar-note"><div className="note-spark" aria-hidden="true">✦</div><strong>Acceso por roles</strong><p>Consulta y administra exclusivamente la información autorizada para tu cuenta.</p></div>
         </div>
         <div className="sidebar-profile">
@@ -695,6 +704,13 @@ export default function App() {
           <footer className="footer" aria-label="Institución académica">SIGMA · Universidad de El Salvador</footer>
         </div>
       </main>
+      <button type="button" className="aura-floating-button"
+        aria-label="Abrir asistente AURA" onClick={() => setAuraAbierto(true)}>
+        <span aria-hidden="true">✧</span><strong>AURA</strong>
+      </button>
+      <AURA token={token} abierto={auraAbierto} onCerrar={() => setAuraAbierto(false)}
+        soloLectura={esVisitante} onSesionExpirada={cerrarSesion}
+        onDatosActualizados={() => {setVersion(v => v + 1);}}/>
 
       {solicitudOperacion && <ConfirmacionOperacion solicitud={solicitudOperacion}
         confirmar={clave=>{
