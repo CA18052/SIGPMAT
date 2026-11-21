@@ -6,6 +6,7 @@ import { herramientasAura, ejecutarHerramientaAura } from './herramientas.js';
 import { verificarPropuesta } from './propuestas.js';
 import { seleccionarProveedorAura, cargaProveedorAura } from './proveedor.js';
 import type { ProveedorAura } from './proveedor.js';
+import { diagnosticarErrorAura, FalloProveedorAura, mensajeErrorAura } from './diagnostico.js';
 
 type Mensaje = {rol:'usuario'|'aura';contenido:string};
 type Solicitud={mensaje:string;historial?:Mensaje[]};
@@ -23,21 +24,35 @@ const textoFinal=(salida:Salida[])=>salida
 async function llamarModelo(
   datos:Record<string,unknown>,proveedor:ProveedorAura
 ):Promise<RespuestaModelo>{
-  const respuesta=await fetch(proveedor.endpoint,{
-    method:'POST',
-    headers:{
-      'Authorization':'Bearer '+proveedor.clave,
-      'Content-Type':'application/json'
-    },
-    body:JSON.stringify(cargaProveedorAura(datos,proveedor)),
-    signal:AbortSignal.timeout(22000)
-  });
-  if(!respuesta.ok){
-    // NO exponer el cuerpo de errores de proveedor, ni tokens, ni prompts.
-    const code=respuesta.status;
-    throw new Error(code===429?'LIMITE':code===401||code===403?'CREDENCIAL':'PROVEEDOR');
+  // Solo un reintento para fallos explícitos de generación de llamadas a funciones.
+  // Los errores de formato de la API, autenticación y cuota NO se reintentan.
+  for(let intento=0;intento<2;intento++){
+    const solicitud=intento===0?datos:{
+      ...datos,
+      max_output_tokens:1500,
+      instructions:String(datos.instructions??'')+
+        '\nUsa una función existente. Sus argumentos deben ser JSON válido, con los campos requeridos; no inventes propiedades.'
+    };
+    const respuesta=await fetch(proveedor.endpoint,{
+      method:'POST',
+      headers:{
+        'Authorization':'Bearer '+proveedor.clave,
+        'Content-Type':'application/json'
+      },
+      body:JSON.stringify(cargaProveedorAura(solicitud,proveedor)),
+      signal:AbortSignal.timeout(22000)
+    });
+    if(respuesta.ok)return await respuesta.json() as RespuestaModelo;
+    // El proveedor puede incluir texto generado y datos del usuario en los errores.
+    // Solo se extraen campos de clasificación, nunca se escriben cuerpos a logs.
+    let cuerpo:unknown=null;
+    try{cuerpo=await respuesta.json();}catch{/* Sin detalles estructurados. */}
+    const fallo=diagnosticarErrorAura(respuesta.status,cuerpo);
+    if(proveedor.tipo==='groq'&&fallo.causa==='HERRAMIENTA_INVALIDA'&&intento===0)
+      continue;
+    throw fallo;
   }
-  return await respuesta.json() as RespuestaModelo;
+  throw new FalloProveedorAura('NO_DISPONIBLE',503,'no_especificado','no_especificado');
 }
 
 function instrucciones(u:{roles:string[]},fecha:string){
@@ -178,15 +193,20 @@ export function registrarRutasAura(app:FastifyInstance):void{
       return {respuesta:respuestaTexto,propuesta:propuestas[0]??null,modelo:proveedor.modelo,
         aviso:'AURA usa información autorizada de SIGPMAT; verifica los datos antes de tomar decisiones.'};
     }catch(e){
-      const msg=e instanceof Error?e.message:'PROVEEDOR';
-      request.log.warn({causa:msg},'AURA no pudo completar la solicitud');
-      const respuesta=msg==='CREDENCIAL'?
-        'La clave configurada para '+(proveedor.tipo==='groq'?'Groq':'OpenAI')+
-        ' no es válida o no tiene permisos.':
-        msg==='LIMITE'?
-          'Se alcanzó la cuota gratuita o el límite del proveedor de IA. Vuelve a intentarlo más tarde. No se utilizará un proveedor de pago automáticamente.':
-          'El proveedor de IA no está disponible temporalmente.';
-      return reply.code(503).send({error:respuesta});
+      // Mostrar la categoría precisa al usuario y el HTTP de origen en Render.
+      // Ningún mensaje bruto de Groq (ni failed_generation) se expone o registra.
+      const fallo=e instanceof FalloProveedorAura?e:
+        new FalloProveedorAura('NO_DISPONIBLE',0,'red_o_timeout','no_especificado');
+      request.log.warn({
+        causa:fallo.causa,estado_proveedor:fallo.status,
+        tipo_proveedor:fallo.tipo,codigo_proveedor:fallo.codigo,
+        proveedor:proveedor.tipo
+      },'AURA no pudo completar la solicitud');
+      const status=fallo.causa==='SOLICITUD_INVALIDA'?502:503;
+      return reply.code(status).send({
+        error:mensajeErrorAura(fallo.causa,proveedor.tipo),
+        codigo:'AURA_'+fallo.causa
+      });
     }
   });
 

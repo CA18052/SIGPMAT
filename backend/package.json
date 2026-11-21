@@ -16,7 +16,7 @@
     "smoke:personal:v05": "tsx src/scripts/smoke-personal-v05.ts",
     "smoke:turnos": "tsx src/scripts/smoke-turnos.ts",
     "bootstrap:neon": "tsx src/scripts/bootstrap-demo-neon.ts",
-    "test:aura": "tsx --test tests/aura-propuestas.test.ts tests/aura-proveedor.test.ts"
+    "test:aura": "tsx --test tests/aura-propuestas.test.ts tests/aura-proveedor.test.ts tests/aura-diagnostico.test.ts"
   },
   "keywords": [],
   "author": "",
