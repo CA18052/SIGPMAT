@@ -24,7 +24,7 @@ async function usuarioConAcceso(request:FastifyRequest,reply:FastifyReply) {
 async function departamentoAutorizado(u:Usuario,departamento:string){
   if(u.roles.includes('ADMIN_GENERAL'))return true;
   const r=await pool.query<{permitido:boolean}>(
-    \`SELECT EXISTS (
+    `SELECT EXISTS (
        SELECT 1 FROM sigpmat.usuarios u
        JOIN sigpmat.empleados j ON j.id_empleado=u.id_empleado
        JOIN sigpmat.empleado_departamento ed ON ed.id_empleado=j.id_empleado
@@ -33,7 +33,7 @@ async function departamentoAutorizado(u:Usuario,departamento:string){
          AND j.estado_vinculo='activo' AND d.activo=TRUE AND ed.es_jefe=TRUE
          AND ed.fecha_inicio<=CURRENT_DATE
          AND (ed.fecha_fin IS NULL OR ed.fecha_fin>=CURRENT_DATE)
-    ) AS permitido\`,[u.id_usuario,departamento]);
+    ) AS permitido`,[u.id_usuario,departamento]);
   return r.rows[0]?.permitido===true;
 }
 
@@ -63,7 +63,7 @@ export function registrarRutasReportes(app:FastifyInstance):void {
     // Todo agregado en SQL antes de devolverlo. No se exponen datos de contacto.
     // Los roles ADMIN_GENERAL y VISITANTE_LECTURA ven áreas globales;
     // JEFE_AREA se restringe a su jefatura vigente.
-    const {rows}=await pool.query<Area>(\`
+    const {rows}=await pool.query<Area>(`
       WITH areas AS (
         SELECT d.id_departamento,d.nombre
         FROM sigpmat.departamentos d
@@ -117,7 +117,7 @@ export function registrarRutasReportes(app:FastifyInstance):void {
       FROM areas d LEFT JOIN turnos t ON t.id_departamento=d.id_departamento
       GROUP BY d.id_departamento,d.nombre
       ORDER BY faltantes DESC,d.nombre
-    \`,[u.roles.includes('ADMIN_GENERAL')||u.roles.includes('VISITANTE_LECTURA'),
+    `,[u.roles.includes('ADMIN_GENERAL')||u.roles.includes('VISITANTE_LECTURA'),
        u.id_usuario,desde,hasta]);
     const totales=rows.reduce((sum,a)=>({
       turnos:sum.turnos+a.turnos,abiertos:sum.abiertos+a.abiertos,
@@ -147,8 +147,8 @@ export function registrarRutasReportes(app:FastifyInstance):void {
     const {rows}=await pool.query<{
       id_turno:string;id_departamento:string;estado:string;
       inicio_at:string;fin_at:string
-    }>(\`SELECT id_turno::text,id_departamento::text,estado,inicio_at,fin_at
-       FROM sigpmat.turnos WHERE id_turno=$1::bigint\`,[id]);
+    }>(`SELECT id_turno::text,id_departamento::text,estado,inicio_at,fin_at
+       FROM sigpmat.turnos WHERE id_turno=$1::bigint`,[id]);
     const turno=rows[0];
     if(!turno||!await departamentoAutorizado(u,turno.id_departamento))
       return reply.code(404).send({error:'Turno no encontrado o fuera de tu departamento.'});
@@ -160,7 +160,7 @@ export function registrarRutasReportes(app:FastifyInstance):void {
     const {rows:requerimientos}=await pool.query<{
       id_requerimiento:string;cargo:string;especialidad:string|null;
       cupos_requeridos:number;cupos_ocupados:number
-    }>(\`SELECT r.id_requerimiento::text,c.nombre AS cargo,
+    }>(`SELECT r.id_requerimiento::text,c.nombre AS cargo,
          s.nombre AS especialidad,r.cupos_requeridos,
          (SELECT COUNT(*)::integer FROM sigpmat.asignaciones_turno a
           WHERE a.id_requerimiento=r.id_requerimiento
@@ -168,7 +168,7 @@ export function registrarRutasReportes(app:FastifyInstance):void {
         FROM sigpmat.requerimientos_turno r
         JOIN sigpmat.cargos c ON c.id_cargo=r.id_cargo
         LEFT JOIN sigpmat.especialidades s ON s.id_especialidad=r.id_especialidad
-        WHERE r.id_turno=$1::bigint ORDER BY r.id_requerimiento\`,[id]);
+        WHERE r.id_turno=$1::bigint ORDER BY r.id_requerimiento`,[id]);
 
     const detallados=[];
     for(const req of requerimientos){
@@ -180,7 +180,7 @@ export function registrarRutasReportes(app:FastifyInstance):void {
       const {rows:candidatos}=await pool.query<{
         id_empleado:string;codigo_empleado:string;nombre_completo:string;
         turnos_recientes:number
-      }>(\`
+      }>(`
         SELECT e.id_empleado::text,e.codigo_empleado,
           (e.nombres||' '||e.apellidos) AS nombre_completo,
           (SELECT COUNT(*)::integer
@@ -236,7 +236,7 @@ export function registrarRutasReportes(app:FastifyInstance):void {
           )
         ORDER BY turnos_recientes ASC,e.apellidos,e.nombres,e.id_empleado
         LIMIT 5
-      \`,[req.id_requerimiento]);
+      `,[req.id_requerimiento]);
       detallados.push({...req,faltantes,candidatos});
     }
     return {id_turno:id,habilitado:true,requerimientos:detallados,
