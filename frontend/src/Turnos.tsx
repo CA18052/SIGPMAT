@@ -23,6 +23,18 @@ type Asignacion = {
 type DetalleTurno = {
   turno: Turno; requerimientos: Requerimiento[]; asignaciones: Asignacion[];
 };
+type CandidatoSugerido={
+  id_empleado:string;codigo_empleado:string;nombre_completo:string;turnos_recientes:number
+};
+type RequerimientoSugerido={
+  id_requerimiento:string;cargo:string;especialidad:string|null;
+  cupos_requeridos:number;cupos_ocupados:number;faltantes:number;
+  candidatos:CandidatoSugerido[]
+};
+type RespuestaSugerencias={
+  id_turno:string;habilitado:boolean;motivo?:string;
+  requerimientos:RequerimientoSugerido[];criterios?:string[];aviso?:string
+};
 type Formulario = {
   id_departamento: string; id_cargo: string; id_especialidad: string;
   tipo_turno: string; inicio_at: string; fin_at: string;
@@ -70,6 +82,8 @@ export default function Turnos({
   const [editandoTurnoId, setEditandoTurnoId] = useState<string | null>(null);
   const [detalle, setDetalle] = useState<DetalleTurno | null>(null);
   const [candidatos, setCandidatos] = useState<Empleado[]>([]);
+  const [sugerencias,setSugerencias]=useState<RespuestaSugerencias|null>(null);
+  const [consultandoSugerencias,setConsultandoSugerencias]=useState(false);
   const [seleccion, setSeleccion] = useState('');
   const [filtroArea, setFiltroArea] = useState('');
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
@@ -138,6 +152,7 @@ export default function Turnos({
   const cubiertos = abiertos.reduce((n, t) => n + t.cupos_ocupados, 0);
 
   async function abrirTurno(id: string) {
+    setSugerencias(null);
     setError(''); setMensaje(''); setProcesando(true);
     try {
       const detalle = await requestApi<DetalleTurno>('/api/turnos/' + id, token);
@@ -147,6 +162,37 @@ export default function Turnos({
       setDetalle(detalle); setCandidatos(lista.empleados); setSeleccion('');
     } catch (e) { errorApi(e); }
     finally { setProcesando(false); }
+  }
+
+  async function consultarSugerencias(id:string){
+    setConsultandoSugerencias(true);setError('');
+    try{
+      const respuesta=await requestApi<RespuestaSugerencias>(
+        '/api/turnos/'+id+'/sugerencias',token);
+      setSugerencias(respuesta);
+    }catch(e){errorApi(e);}
+    finally{setConsultandoSugerencias(false);}
+  }
+
+  async function asignarSugerido(requerimiento:string,candidato:CandidatoSugerido){
+    if(!detalle||procesando)return;
+    const turnoId=detalle.turno.id_turno;
+    if(!window.confirm('¿Asignar a '+candidato.nombre_completo+
+      ' al turno #'+turnoId+'? PostgreSQL comprobará nuevamente su disponibilidad.'))return;
+    setProcesando(true);setError('');setMensaje('');
+    try{
+      await requestApi('/api/turnos/'+turnoId+'/asignaciones',token,{
+        method:'POST',body:JSON.stringify({
+          id_requerimiento:requerimiento,id_empleado:candidato.id_empleado
+        })
+      });
+      const nuevo=await requestApi<DetalleTurno>('/api/turnos/'+turnoId,token);
+      setDetalle(nuevo);
+      await cargarListado();
+      await consultarSugerencias(turnoId);
+      setMensaje('Asignación confirmada para '+candidato.nombre_completo+'.');
+    }catch(e){errorApi(e);}
+    finally{setProcesando(false);}
   }
 
   async function guardarTurno(event: FormEvent<HTMLFormElement>) {
@@ -453,6 +499,48 @@ export default function Turnos({
             <div className="shift-requirement-top"><strong>{req.cargo}</strong><span>{req.cupos_ocupados}/{req.cupos_requeridos}</span></div>
             <p>{req.especialidad||'Sin especialidad específica'} · Prioridad {req.prioridad}</p>
           </div>)}
+          {!soloLectura && detalle.turno.estado==='abierto' &&
+            new Date(detalle.turno.inicio_at)>new Date() && (
+            <div className="shift-suggestions">
+              <div className="shift-suggestions-heading">
+                <span className="eyebrow">PLANIFICACIÓN ASISTIDA</span>
+                <h3>Candidatos recomendados</h3>
+                <p>Propuestas según cargo, especialidad, adscripción, conflictos y carga reciente.
+                  No se guardan cambios sin tu confirmación.</p>
+              </div>
+              <button type="button" className="button secondary"
+                disabled={procesando||consultandoSugerencias}
+                onClick={()=>void consultarSugerencias(detalle.turno.id_turno)}>
+                {consultandoSugerencias?'Analizando cobertura…':
+                  sugerencias?'Actualizar candidatos':'Proponer personal'}
+              </button>
+              {sugerencias && <>
+                {sugerencias.requerimientos.map(req=>
+                  <div className="shift-suggest-group" key={req.id_requerimiento}>
+                    <div className="shift-suggest-group-title">
+                      <strong>{req.cargo}</strong>
+                      <span>{req.faltantes} {req.faltantes===1?'cupo pendiente':'cupos pendientes'}</span>
+                    </div>
+                    {req.especialidad&&<small>Especialidad: {req.especialidad}</small>}
+                    {req.faltantes>0&&req.candidatos.length===0&&
+                      <p className="muted">No encontramos personas elegibles con las reglas actuales.</p>}
+                    {req.candidatos.map((c,i)=>
+                      <div key={c.id_empleado} className="shift-suggest-person">
+                        <div>
+                          <strong>{i===0?'★ ':''}{c.nombre_completo}</strong>
+                          <small>{c.codigo_empleado} · {c.turnos_recientes} turnos recientes</small>
+                        </div>
+                        <button type="button" className="button ghost small"
+                          disabled={procesando||consultandoSugerencias}
+                          onClick={()=>void asignarSugerido(req.id_requerimiento,c)}>
+                          Asignar
+                        </button>
+                      </div>)}
+                  </div>)}
+                {sugerencias.aviso&&<p className="shift-suggest-caveat">{sugerencias.aviso}</p>}
+              </>}
+            </div>
+          )}
           <div className="divider"/>
           <h3>Personal asignado</h3>
           {detalle.asignaciones.length===0 && <p className="muted">Sin asignaciones todavía.</p>}
