@@ -75,7 +75,7 @@ function PantallaLogin({ onLogin }: { onLogin: (session: Sesion) => void }) {
         <div className="brand-lockup"><div className="brand-symbol">✚</div><span>SIGPMAT <small>/ SISTEMA HOSPITALARIO</small></span></div>
         <div className="login-message">
           <div className="eyebrow light">GESTIÓN DEL PERSONAL MÉDICO</div>
-          <h1>Una operación<br />más clara.<br /><em>Un equipo mejor<br />coordinado.</em></h1>
+          <h1>Coordina con claridad <em>los turnos de tu equipo.</em></h1>
           <p>Personal, departamentos y cobertura hospitalaria en un mismo entorno de trabajo.</p>
         </div>
         <div className="login-footnote"><span className="status-dot" /> Universidad de El Salvador</div>
