@@ -138,9 +138,14 @@ export default function Reportes({
         <div className="panel-heading wrap-heading">
           <div><span className="eyebrow">DETALLE Y EXPORTACIÓN</span><h2>Resumen departamental</h2>
             <p>{reporte.departamentos.length} departamentos visibles según tu perfil.</p></div>
-          <button type="button" className="button ghost small" onClick={()=>descargarCsv(reporte)}>
-            Descargar CSV
-          </button>
+          <div className="report-export-actions">
+            <button type="button" className="button ghost small" onClick={()=>window.print()}>
+              Imprimir / Guardar PDF
+            </button>
+            <button type="button" className="button ghost small" onClick={()=>descargarCsv(reporte)}>
+              Descargar CSV
+            </button>
+          </div>
         </div>
         <div className="table-wrap"><table>
           <thead><tr><th>Departamento</th><th>Turnos</th><th>Cupos</th>
