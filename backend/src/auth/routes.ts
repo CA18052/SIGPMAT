@@ -126,6 +126,73 @@ export async function autorizar(
 }
 
 export function registrarRutasAutenticacion(app: FastifyInstance): void {
+  // Registro público de solo lectura. El carnet no prueba la titularidad.
+  app.post<{Body:{carnet:string;contrasena:string;nombre_mostrado?:string}}>(
+    '/api/auth/registrar',{
+      config:{rateLimit:{max:3,timeWindow:'10 minutes'}},
+      schema:{body:{
+        type:'object',additionalProperties:false,
+        required:['carnet','contrasena'],
+        properties:{
+          carnet:{type:'string',pattern:'^[A-Z]{2}[0-9]{5}$',minLength:7,maxLength:7},
+          contrasena:{type:'string',minLength:12,maxLength:128},
+          nombre_mostrado:{type:'string',minLength:3,maxLength:120}
+        }
+      }}
+    },async(request,reply)=>{
+      reply.header('Cache-Control','no-store');
+      const {carnet,contrasena,nombre_mostrado}=request.body;
+      if(!/^[A-Z]{2}[0-9]{5}$/.test(carnet))
+        return reply.code(400).send({error:'Carnet inválido: dos letras mayúsculas y cinco números.'});
+      if(/[\u0000-\u001f\u007f]/.test(contrasena))
+        return reply.code(400).send({error:'La contraseña contiene caracteres no permitidos.'});
+      const nombre=nombre_mostrado?.trim()||carnet;
+      if(nombre.length>120||nombre.length<3)
+        return reply.code(400).send({error:'Nombre mostrado inválido.'});
+      const hash=await argon2.hash(contrasena,{
+        type:argon2.argon2id,memoryCost:19456,timeCost:2,parallelism:1
+      });
+      const client=await pool.connect();
+      try{
+        await client.query('BEGIN');
+        const existe=await client.query(
+          'SELECT 1 FROM sigpmat.usuarios WHERE lower(nombre_usuario)=lower($1) LIMIT 1',[carnet]
+        );
+        if(existe.rowCount){
+          await client.query('ROLLBACK');
+          return reply.code(409).send({error:'Este carnet ya está registrado. Contacta al administrador si no reconoces la cuenta.'});
+        }
+        const rol=await client.query<{id_rol:string}>(
+          "SELECT id_rol::text FROM sigpmat.roles WHERE codigo='VISITANTE_LECTURA' AND activo=TRUE");
+        if(!rol.rows[0])throw new Error('Rol VISITANTE_LECTURA no disponible');
+        const registrado=await client.query<{id_usuario:string}>(
+          `INSERT INTO sigpmat.usuarios(
+            nombre_usuario,correo_institucional,contrasena_hash,nombre_mostrado,
+            tipo_cuenta,estado,es_superadministrador,debe_cambiar_contrasena,sesion_version)
+           VALUES($1,$2,$3,$4,'visitante','activa',FALSE,FALSE,0)
+           RETURNING id_usuario::text`,
+          [carnet,carnet.toLowerCase()+'@sigpmat.invalid',hash,nombre]
+        );
+        await client.query(
+          'INSERT INTO sigpmat.usuario_roles(id_usuario,id_rol) VALUES($1::bigint,$2::bigint)',
+          [registrado.rows[0].id_usuario,rol.rows[0].id_rol]
+        );
+        await client.query('COMMIT');
+        return reply.code(201).send({
+          registrado:true,
+          mensaje:'Cuenta de lectura creada. Ya puedes iniciar sesión con tu carnet.',
+          nombre_usuario:carnet,permisos:'Solo consulta'
+        });
+      }catch(e){
+        await client.query('ROLLBACK').catch(()=>{});
+        if((e as {code?:string}).code==='23505')
+          return reply.code(409).send({error:'Este carnet ya está registrado.'});
+        request.log.error({err:e},'Error al registrar cuenta pública');
+        return reply.code(500).send({error:'No se pudo crear la cuenta. Intenta nuevamente.'});
+      }finally{client.release();}
+    }
+  );
+
   app.post<{ Body: LoginBody }>(
     '/api/auth/login',
     {

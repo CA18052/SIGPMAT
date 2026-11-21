@@ -13,7 +13,7 @@ type SesionGuardada = {
   venceEn: number;
 };
 
-export type PaginaGuardada = 'resumen' | 'empleados' | 'departamentos' | 'turnos' | 'usuarios';
+export type PaginaGuardada = 'resumen' | 'empleados' | 'departamentos' | 'turnos' | 'usuarios' | 'auditoria';
 
 export function guardarSesionEnPestana(sesion: Sesion): void {
   try {
@@ -80,7 +80,7 @@ export function guardarPaginaEnPestana(pagina: PaginaGuardada): void {
 export function recuperarPaginaDePestana(): PaginaGuardada {
   try {
     const pagina = sessionStorage.getItem(CLAVE_PAGINA);
-    if (pagina === 'empleados' || pagina === 'departamentos' || pagina === 'turnos' || pagina === 'usuarios') {
+    if (pagina === 'empleados' || pagina === 'departamentos' || pagina === 'turnos' || pagina === 'usuarios' || pagina === 'auditoria') {
       return pagina;
     }
   } catch { /* no disponible */ }

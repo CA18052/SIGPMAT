@@ -47,9 +47,18 @@
 - **Pendiente de ejecución humana:** introducir los carnets reales, generar cuentas reales y del docente, entregar credenciales privadas, ejecutar pruebas de login y permisos desde el navegador. No afirmar que estas pruebas pasaron antes de obtener evidencia.
 - **No implementado todavía:** registro abierto por invitación de un solo uso; se mantiene cerrado para evitar altas administrativas públicas.
 
+## Paquete 06 — Registro público y control de operaciones
+
+- **Registro público:** alta desde bienvenida con carnet de dos letras mayúsculas y cinco dígitos, contraseña elegida (mínimo 12 caracteres). El backend asigna únicamente `VISITANTE_LECTURA`; no otorga permisos administrativos.
+- **Recorrido de solo lectura:** visitante consulta personal, departamentos y turnos, sin acceso a DUI ni datos de contacto, ni controles para modificar.
+- **Confirmación de identidad:** crear, editar, eliminar o cancelar muestra un diálogo para volver a pedir contraseña; Fastify exige comprobante de un solo uso, vinculado a la acción.
+- **Auditoría:** tabla persistente y pantalla exclusiva del superadministrador con autor, fecha, recurso, acción, resultado y campos afectados, sin valores sensibles.
+- **Filtros avanzados del personal:** departamento, cargo y estado combinables; búsqueda puntual por nombres/código.
+- **Demostración sugerida:** registrar un carnet ficticio autorizado para la demo, entrar como visitante y mostrar consultas sin edición; luego entrar como administrador, editar un registro temporal con confirmación, y mostrar el evento en la bitácora desde superadmin.
+- **Pruebas E2E de reautenticación, registro y permisos:** requieren sesión real después de publicación. No afirmar que se completaron antes de documentarlas.
+
 ## Plan de funciones próximas: NO IMPLEMENTADAS
 
-- **Paquete 06:** reautenticación para operaciones sensibles, bitácora exclusiva del superadministrador, controles adicionales de sesión.
 - **Paquete 07 — Render:** por decisión del propietario, los despliegues quedan bajo control **manual**; no se requiere automatizar su publicación.
 - **Paquete 08:** reportes avanzados y propuestas automáticas de cobertura.
 - **Paquete 09:** AURA, asistente de inteligencia artificial con información y permisos controlados por Fastify.

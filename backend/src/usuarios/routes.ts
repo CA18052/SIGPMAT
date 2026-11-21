@@ -53,7 +53,7 @@ export function registrarRutasUsuarios(app:FastifyInstance) {
       schema:{body:{type:'object',additionalProperties:false,
         required:['nuevo_usuario','nombre_mostrado','contrasena_actual'],
         properties:{
-          nuevo_usuario:{type:'string',minLength:6,maxLength:20,pattern:'^[A-Za-z]{2,4}[0-9]{4,8}$'},
+          nuevo_usuario:{type:'string',minLength:6,maxLength:20,pattern:'^[A-Za-z]{2}[0-9]{5}$'},
           nombre_mostrado:{type:'string',minLength:3,maxLength:120},
           contrasena_actual:{type:'string',minLength:1,maxLength:128}
         }}}
@@ -63,7 +63,7 @@ export function registrarRutasUsuarios(app:FastifyInstance) {
       if(!admin)return reply;
       const nuevo=request.body.nuevo_usuario.trim().toUpperCase();
       const nombre=request.body.nombre_mostrado.trim();
-      if(!/^[A-Z]{2,4}[0-9]{4,8}$/.test(nuevo)||nombre.length<3)
+      if(!/^[A-Z]{2}[0-9]{5}$/.test(nuevo)||nombre.length<3)
         return reply.code(400).send({error:'Verifica el carnet y el nombre completo.'});
       const {rows}=await pool.query<{contrasena_hash:string}>(
         'SELECT contrasena_hash FROM sigpmat.usuarios WHERE id_usuario=$1::bigint AND es_superadministrador=TRUE',
@@ -132,9 +132,9 @@ export function registrarRutasUsuarios(app:FastifyInstance) {
     if(nombre.length<3){
       return reply.code(400).send({error:'El nombre completo debe tener al menos tres caracteres.'});
     }
-    if(b.tipo_cuenta==='integrante' && !/^[A-Z]{2,4}[0-9]{4,8}$/.test(usuario)){
-      return errorBase(reply,400,'El carnet no tiene el formato esperado.',
-        'Debe comenzar con letras seguidas del número de carnet.',
+    if(b.tipo_cuenta==='integrante' && !/^[A-Z]{2}[0-9]{5}$/.test(usuario)){
+      return errorBase(reply,400,'El carnet debe tener dos letras y cinco números.',
+        'Debe contener las iniciales de los apellidos seguidas de cinco cifras.',
         'Introduce el carnet tal como aparece en los documentos de la universidad; ejemplo ilustrativo AB12345.');
     }
     const correo=b.correo_institucional?.trim().toLowerCase()

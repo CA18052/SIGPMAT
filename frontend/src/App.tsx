@@ -6,18 +6,22 @@ import FormularioDepartamento from './FormularioDepartamento';
 import AvatarEmpleado from './AvatarEmpleado';
 import Usuarios from './Usuarios';
 import CambiarContrasena from './CambiarContrasena';
+import RegistroPublico from './RegistroPublico';
+import ConfirmacionOperacion from './ConfirmacionOperacion';
+import Auditoria from './Auditoria';
 import {
   actualizarUsuarioDeSesion, borrarSesionDePestana, guardarPaginaEnPestana,
   guardarSesionEnPestana, recuperarPaginaDePestana, recuperarSesionDePestana
 } from './session';
 import {
-  ApiError, iniciarSesion, requestApi
+  ApiError, iniciarSesion, requestApi, establecerProveedorConfirmacion
 } from './api';
 import type {
-  Acreditacion, Departamento, Empleado, EmpleadoDetalle, Sesion, Usuario
+  Acreditacion, Departamento, Empleado, EmpleadoDetalle, Sesion, Usuario,
+  SolicitudConfirmacion
 } from './api';
 
-type Pagina = 'resumen' | 'empleados' | 'departamentos' | 'turnos' | 'usuarios';
+type Pagina = 'resumen' | 'empleados' | 'departamentos' | 'turnos' | 'usuarios' | 'auditoria';
 type Detalle = { empleado: EmpleadoDetalle; especialidades: Acreditacion[] };
 type ListaDepartamento = { departamento: Departamento; empleados: Empleado[] };
 
@@ -48,6 +52,8 @@ function PantallaLogin({ onLogin }: { onLogin: (session: Sesion) => void }) {
   const [contrasena, setContrasena] = useState('');
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState('');
+  const [registro, setRegistro] = useState(false);
+  const [cuentaCreada, setCuentaCreada] = useState('');
   async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (procesando) return;
@@ -75,6 +81,8 @@ function PantallaLogin({ onLogin }: { onLogin: (session: Sesion) => void }) {
       <main className="login-form-area">
         <div className="login-box">
           <div className="mobile-brand">✚ SIGPMAT</div>
+          {registro ? <RegistroPublico onVolver={() => setRegistro(false)}
+            onCreada={carnet=>{setUsuario(carnet);setContrasena('');setRegistro(false);setCuentaCreada(carnet);}}/> : <>
           <div className="eyebrow">ACCESO AL SISTEMA</div>
           <h2>Bienvenido de nuevo</h2>
           <p className="muted intro">Ingresa con tus credenciales asignadas para continuar.</p>
@@ -85,8 +93,13 @@ function PantallaLogin({ onLogin }: { onLogin: (session: Sesion) => void }) {
             <button className="button primary full" type="submit" disabled={procesando}>{procesando ? 'Validando credenciales…' : 'Ingresar al sistema'} <span aria-hidden="true">→</span></button>
           </form>
           <div className="login-help"><span className="lock-icon">⌁</span> Sesión protegida · Acceso según rol</div>
-          <p className="mini muted">¿Necesitas una cuenta? Solicita tus credenciales al superadministrador. El registro administrativo no es público.</p>
-          <p className="mini muted">Los datos de esta instalación son ficticios. No debe utilizarse en operación clínica real.</p>
+          {cuentaCreada && <p role="status" className="employee-success">Cuenta {cuentaCreada} registrada. Inicia sesión para consultar SIGPMAT.</p>}
+          <button type="button" className="button secondary full" onClick={()=>{setRegistro(true);setError('');}}>
+            Crear cuenta de lectura
+          </button>
+          <p className="mini muted">El registro público solo permite consultar información. Las cuentas administrativas las crea el superadministrador.</p>
+          <p className="mini muted">Datos de demostración para fines académicos, no para operación clínica real.</p>
+          </>}
         </div>
       </main>
     </div>
@@ -106,6 +119,8 @@ export default function App() {
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [filtrados, setFiltrados] = useState<Empleado[] | null>(null);
   const [filtro, setFiltro] = useState('');
+  const [filtroCargo, setFiltroCargo] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [cargando, setCargando] = useState(false);
@@ -129,6 +144,8 @@ export default function App() {
   const [formularioDepartamento, setFormularioDepartamento] = useState<Departamento | 'nuevo' | null>(null);
   const [mensajeDepartamento, setMensajeDepartamento] = useState('');
   const [mostrarCambioClave, setMostrarCambioClave] = useState(false);
+  const [solicitudOperacion, setSolicitudOperacion] = useState<SolicitudConfirmacion | null>(null);
+  const resolverOperacion = useRef<((contrasena: string | null) => void) | null>(null);
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
   const menuRef = useRef<HTMLElement | null>(null);
   const botonCerrarMenuRef = useRef<HTMLButtonElement | null>(null);
@@ -174,12 +191,32 @@ export default function App() {
   const esAdmin = sesion?.usuario.roles.includes('ADMIN_GENERAL') ?? false;
   const esSuperadmin = sesion?.usuario.es_superadministrador === true;
   const esJefe = sesion?.usuario.roles.includes('JEFE_AREA') ?? false;
-  const autorizado = esAdmin || esJefe;
+  const esVisitante = sesion?.usuario.roles.includes('VISITANTE_LECTURA') ?? false;
+  const autorizado = esAdmin || esJefe || esVisitante;
   const token = sesion?.access_token ?? '';
 
   useEffect(() => {
-    if (pagina === 'usuarios' && !esSuperadmin) setPagina('resumen');
+    if ((pagina === 'usuarios' || pagina === 'auditoria') && !esSuperadmin) setPagina('resumen');
   }, [pagina, esSuperadmin]);
+
+  // La contraseña sólo vive en el formulario de confirmación. Cada solicitud
+  // recibe un comprobante de un uso, específico de su método y ruta.
+  useEffect(() => {
+    if (!sesion || validandoSesion || sesion.usuario.debe_cambiar_contrasena) {
+      establecerProveedorConfirmacion(null);
+      return;
+    }
+    establecerProveedorConfirmacion((solicitud) => new Promise(resolve => {
+      if (resolverOperacion.current) { resolve(null); return; }
+      resolverOperacion.current=resolve;
+      setSolicitudOperacion(solicitud);
+    }));
+    return () => {
+      establecerProveedorConfirmacion(null);
+      resolverOperacion.current?.(null);
+      resolverOperacion.current=null;
+    };
+  }, [sesion?.access_token, validandoSesion, sesion?.usuario.debe_cambiar_contrasena]);
 
   function manejarError(e: unknown) {
     if (e instanceof ApiError && e.status === 401) {
@@ -216,14 +253,27 @@ export default function App() {
   }, [token, version, autorizado, validandoSesion]);
 
   useEffect(() => {
-    if (!sesion || !autorizado || validandoSesion || sesion.usuario.debe_cambiar_contrasena || !filtro) { setFiltrados(null); return; }
-    let cancelar = false;
-    requestApi<{ empleados: Empleado[] }>('/api/empleados?departamento_id=' + encodeURIComponent(filtro), token)
-      .then(r => { if (!cancelar) { setFiltrados(r.empleados); setError(''); } })
-      .catch(e => { if (!cancelar) manejarError(e); });
-    return () => { cancelar = true; };
+    if (!sesion || !autorizado || validandoSesion ||
+        sesion.usuario.debe_cambiar_contrasena ||
+        !(filtro || filtroCargo || filtroEstado)) {
+      setFiltrados(null); return;
+    }
+    let cancelar=false;
+    const params=new URLSearchParams();
+    if(filtro)params.set('departamento_id',filtro);
+    if(filtroCargo)params.set('cargo',filtroCargo);
+    if(filtroEstado)params.set('estado',filtroEstado);
+    requestApi<{empleados:Empleado[]}>('/api/empleados?'+params.toString(),token)
+      .then(r=>{if(!cancelar){setFiltrados(r.empleados);setError('');}})
+      .catch(e=>{if(!cancelar)manejarError(e);});
+    return()=>{cancelar=true;};
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtro, token, version, autorizado, validandoSesion]);
+  },[filtro,filtroCargo,filtroEstado,token,version,autorizado,validandoSesion]);
+
+  const cargosDisponibles=useMemo(()=>
+    [...new Set(empleados.map(e=>e.cargo))].sort((a,b)=>a.localeCompare(b,'es')),
+    [empleados]);
+  const filtrosActivos=[filtro,filtroCargo,filtroEstado].filter(Boolean).length;
 
   const listado = useMemo(() => {
     const needle = busqueda.trim().toLocaleLowerCase('es');
@@ -380,7 +430,8 @@ export default function App() {
     setMenuMovilAbierto(false);
     setSesion(null); setDetalle(null); setDetalleArea(null);
     setMostrarNuevoEmpleado(false); setMensajeEmpleado(''); setMostrarCambioClave(false);
-    setDepartamentos([]); setEmpleados([]); setPagina('resumen'); setFiltro(''); setBusqueda('');
+    resolverOperacion.current?.(null);resolverOperacion.current=null;setSolicitudOperacion(null);
+    setDepartamentos([]); setEmpleados([]); setPagina('resumen'); setFiltro(''); setFiltroCargo(''); setFiltroEstado(''); setBusqueda('');
   }
 
   if (validandoSesion) return (
@@ -407,7 +458,7 @@ export default function App() {
   const etiquetas: Record<Pagina, string> = {
     resumen:'Panel principal',empleados:'Personal hospitalario',
     departamentos:'Departamentos',turnos:'Turnos y cobertura',
-    usuarios:'Administración de usuarios'
+    usuarios:'Administración de usuarios',auditoria:'Bitácora de cambios'
   };
 
   return (
@@ -431,7 +482,10 @@ export default function App() {
               ['empleados', '▤', 'Personal médico'],
               ['departamentos', '▦', 'Departamentos'],
               ['turnos', '◷', 'Turnos y cobertura'],
-              ...(esSuperadmin ? [['usuarios', '♙', 'Usuarios'] as const] : [])
+              ...(esSuperadmin ? [
+                ['usuarios', '♙', 'Usuarios'] as const,
+                ['auditoria', '☷', 'Bitácora'] as const
+              ] : [])
             ] as const).map(([id, glyph, text]) => (
               <button key={id} type="button" className={'nav-item ' + (pagina === id ? 'nav-active' : '')} onClick={() => {setPagina(id); setDetalle(null); setDetalleArea(null); setError(''); setMenuMovilAbierto(false);}}>
                 <span className="nav-glyph" aria-hidden="true">{glyph}</span>{text}
@@ -444,7 +498,7 @@ export default function App() {
           <span className="profile-avatar">{iniciales}</span>
           <div className="profile-copy">
             <strong>{sesion.usuario.nombre_mostrado || sesion.usuario.nombre_usuario}</strong>
-            <span>{esSuperadmin?'Superadministrador':sesion.usuario.tipo_cuenta==='docente'?'Docente evaluador':esAdmin?'Administrador operativo':esJefe?'Jefe de área':'Personal médico'}</span>
+            <span>{esSuperadmin?'Superadministrador':sesion.usuario.tipo_cuenta==='docente'?'Docente evaluador':esVisitante?'Visitante · Solo lectura':esAdmin?'Administrador operativo':esJefe?'Jefe de área':'Personal médico'}</span>
           </div>
           <button type="button" className="logout-button profile-security-button"
             onClick={() => {setMostrarCambioClave(true);setMenuMovilAbierto(false);}}>
@@ -488,14 +542,17 @@ export default function App() {
         <div className="content">
           <div className="page-heading">
             <div><div className="eyebrow">ADMINISTRACIÓN OPERATIVA</div><h1>{etiquetas[pagina]}</h1>
-              <p>{pagina === 'resumen' ? 'Una vista clara de la información disponible para tu perfil.' : pagina === 'empleados' ? 'Consulta y administra la información del personal autorizado.' : pagina === 'turnos' ? 'Programa turnos y asigna personal según la cobertura necesaria.' : pagina === 'usuarios' ? 'Administra las cuentas individuales y sus credenciales de forma segura.' : 'Consulta las áreas hospitalarias disponibles según tu rol.'}</p></div>
+              <p>{pagina === 'resumen' ? 'Una vista clara de la información disponible para tu perfil.' : pagina === 'empleados' ? 'Consulta y administra la información del personal autorizado.' : pagina === 'turnos' ? 'Programa turnos y asigna personal según la cobertura necesaria.' : pagina === 'usuarios' ? 'Administra las cuentas individuales y sus credenciales de forma segura.' : pagina === 'auditoria' ? 'Consulta quién modificó qué registro y cuándo.' : 'Consulta las áreas hospitalarias disponibles según tu rol.'}</p></div>
             <div className="date-pill">◷ <span>Información según tu perfil</span></div>
           </div>
 
           {error && <ErrorMessage text={error}
             motivo={errorDetalle?.motivo} solucion={errorDetalle?.solucion}/>}
           {!autorizado ? <div className="empty"><h2>Acceso limitado</h2><p>Este perfil no cuenta todavía con módulos de consulta habilitados. La API mantiene sus permisos de acceso.</p></div> :
-          pagina === 'usuarios' ? (
+          pagina === 'auditoria' ? (
+            esSuperadmin ? <Auditoria token={token} onSesionExpirada={cerrarSesion}/>
+              : <div className="empty"><h2>Acceso restringido</h2></div>
+          ) : pagina === 'usuarios' ? (
             esSuperadmin
               ? <Usuarios token={token} onSesionExpirada={cerrarSesion}/>
               : <div className="empty"><h2>Acceso restringido</h2><p>La gestión de cuentas requiere permiso de superadministrador.</p></div>
@@ -535,9 +592,9 @@ export default function App() {
                     <input type="search" value={busqueda} placeholder="Nombre, código o cargo…"
                       onChange={e => setBusqueda(e.target.value)} />
                   </label>
-                  <button className={'button ghost small employee-filter-toggle' + (filtro ? ' has-filter' : '')}
+                  <button className={'button ghost small employee-filter-toggle' + (filtrosActivos ? ' has-filter' : '')}
                     type="button" aria-expanded={mostrarFiltros} aria-controls="employee-filter-options"
-                    onClick={() => setMostrarFiltros(v => !v)}>☷ Filtros{filtro ? ' · 1' : ''}</button>
+                    onClick={() => setMostrarFiltros(v => !v)}>☷ Filtros{filtrosActivos ? ' · '+filtrosActivos : ''}</button>
                   {esAdmin && <button type="button" className="button primary small employee-create-button"
                     onClick={() => {setMensajeEmpleado('');setMostrarNuevoEmpleado(true);}}>+ Registrar empleado</button>}
                 </div>
@@ -549,7 +606,23 @@ export default function App() {
                     {departamentos.map(d => <option key={d.id_departamento} value={d.id_departamento}>{d.nombre}</option>)}
                   </select>
                 </label>
-                <button type="button" className="text-button" onClick={() => {setFiltro('');setMostrarFiltros(false);}}>Limpiar filtros</button>
+                <label>Cargo
+                  <select value={filtroCargo} onChange={e => setFiltroCargo(e.target.value)}>
+                    <option value="">Todos los cargos</option>
+                    {cargosDisponibles.map(cargo=><option key={cargo} value={cargo}>{cargo}</option>)}
+                  </select>
+                </label>
+                <label>Estado
+                  <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
+                    <option value="">Todos los estados</option>
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                    <option value="suspendido">Suspendido</option>
+                  </select>
+                </label>
+                <button type="button" className="text-button" onClick={() => {
+                  setFiltro('');setFiltroCargo('');setFiltroEstado('');setMostrarFiltros(false);
+                }}>Limpiar filtros</button>
               </div>}
               <div className="table-wrap employee-desktop-table"><table>
                 <thead><tr><th>Código</th><th>Nombre completo</th><th>Cargo</th><th>Estado</th><th>Acción</th></tr></thead>
@@ -617,6 +690,15 @@ export default function App() {
         </div>
       </main>
 
+      {solicitudOperacion && <ConfirmacionOperacion solicitud={solicitudOperacion}
+        confirmar={clave=>{
+          resolverOperacion.current?.(clave);resolverOperacion.current=null;
+          setSolicitudOperacion(null);
+        }}
+        cancelar={()=>{
+          resolverOperacion.current?.(null);resolverOperacion.current=null;
+          setSolicitudOperacion(null);
+        }}/>}
       {mostrarCambioClave && <CambiarContrasena token={token} obligatorio={false}
         onCerrar={() => setMostrarCambioClave(false)}
         onCompletado={cerrarSesion} onSesionExpirada={cerrarSesion}/>}

@@ -55,15 +55,16 @@ async function comprobarAcceso(
 
   const admin = cuenta.roles.includes('ADMIN_GENERAL');
   const jefe = cuenta.roles.includes('JEFE_AREA');
-  if (!admin && !jefe) {
+  const lectura = cuenta.roles.includes('VISITANTE_LECTURA');
+  if (!admin && !jefe && !lectura) {
     reply.code(403).send({ error: 'Acceso no autorizado' });
     return null;
   }
-  if (!admin && idDepto && !(await tieneJefaturaVigente(cuenta.id_usuario, idDepto))) {
+  if (!admin && !lectura && idDepto && !(await tieneJefaturaVigente(cuenta.id_usuario, idDepto))) {
     reply.code(403).send({ error: 'Departamento no autorizado' });
     return null;
   }
-  return { idUsuario: cuenta.id_usuario, admin };
+  return { idUsuario: cuenta.id_usuario, admin: admin || lectura };
 }
 
 export function registrarRutasDepartamentos(app: FastifyInstance): void {
