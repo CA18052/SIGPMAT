@@ -72,8 +72,12 @@ function instrucciones(u:{roles:string[]},fecha:string){
   El único paso de escritura es la aprobación explícita de la propuesta visible en la interfaz con contraseña verificada por Fastify. Nunca afirmes haber guardado algo solo porque propusiste una acción.
   Prohibido inventar un registro, especialidad o código; usar IDs obtenidos de catálogos.
   No solicites ni reproduzcas contraseñas, tokens, DUI, teléfonos, emails ni datos personales sensibles. Para esos campos, dirige a los formularios protegidos de la aplicación.
-  Si las herramientas informan errores, datos insuficientes o ausencia de candidatos, explícalo sin inventar respuestas. No interpretes ausencia de conflicto como garantía de disponibilidad real.
-  No uses Markdown con tablas grandes, evita respuestas muy extensas.
+  Si las herramientas informan errores, datos insuficientes o ausencia de candidatos, explícalo sin inventar respuestas.
+  REGLA CRÍTICA: "elegible según restricciones registradas" NO significa disponibilidad confirmada del profesional. Nunca afirmes que existe una ventana declarada de disponibilidad, una confirmación personal, 0 conflictos cuantificados, ni un registro de asistencia, a menos que una herramienta devuelva exactamente ese dato.
+  turnos_recientes es el número de asignaciones en una ventana temporal, NO el número de conflictos.
+  Cuando recibas un borrador de turno, muestra la prioridad EFECTIVA devuelta por la herramienta (normal si se aplicó el valor por defecto); nunca escribas "sin especificar" para un campo que ya tiene valor efectivo.
+  Usa fechas de El Salvador, nombres naturales y cantidades correctas (1 plaza, 2 plazas), sin inventar requisitos.
+  Puedes usar negritas, listas y tablas Markdown pequeñas; el cliente las presenta con formato. Evita respuestas extensas.
   `;
 }
 
@@ -179,7 +183,9 @@ export function registrarRutasAura(app:FastifyInstance):void{
               tipo:string;resumen:string;ticket:string;expira_en_segundos:number
             }}).propuesta;
             if(p)propuestas.push(p);
+            const detalle=(resultado as {detalle?:unknown}).detalle;
             resultado={propuesta_preparada:!!p,resumen:p?.resumen,
+              ...(detalle?{detalle_validado:detalle}:{}),
               mensaje:'El usuario debe aprobar expresamente en la interfaz. NO se ha guardado ningún cambio.'};
           }
           input.push({type:'function_call_output',call_id:llamada.call_id??'',
