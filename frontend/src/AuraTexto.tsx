@@ -46,6 +46,7 @@ export default function AuraTexto({texto}:{texto:string}){
         const elementos=b.elementos.map((item,j)=><li key={j}>{enLinea(item)}</li>);
         return b.ordenada?<ol key={i}>{elementos}</ol>:<ul key={i}>{elementos}</ul>;
       }
+      if(b.tipo!=='tabla')return null;
       return <div key={i} className="aura-table-scroll" role="region"
         aria-label="Tabla de resultados de AURA" tabIndex={0}>
         <table><thead><tr>{b.encabezados.map((enc,j)=>
