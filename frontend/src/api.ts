@@ -75,7 +75,8 @@ export function establecerProveedorConfirmacion(proveedor: PedirContrasena | nul
 
 const EXENTAS_CONFIRMACION = new Set([
   '/api/auth/login','/api/auth/registrar','/api/auth/cambiar-contrasena',
-  '/api/auth/confirmar-operacion'
+  '/api/auth/confirmar-operacion',
+  '/api/aura/mensaje' // Consulta IA no modifica base de datos
 ]);
 
 export async function registrarVisitante(carnet: string, contrasena: string, nombre_mostrado?: string) {
