@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
-    "test:session": "node --test tests/session-storage.test.mjs"
+    "test:session": "node --test tests/session-storage.test.mjs",
+    "test:aura-markdown": "node --test tests/aura-markdown.test.mjs"
   },
   "dependencies": {
     "react": "^19.2.0",
