@@ -10,7 +10,8 @@ type ConActor = FastifyRequest & { actorOperacion?:Identidad };
 const MUTAR=new Set(['POST','PATCH','PUT','DELETE']);
 const EXENTAS=new Set([
   '/api/auth/login','/api/auth/registrar','/api/auth/cambiar-contrasena',
-  '/api/auth/confirmar-operacion'
+  '/api/auth/confirmar-operacion',
+  '/api/aura/mensaje' // Operación solo de lectura, aunque utiliza POST.
 ]);
 const limpio=(p:string)=>p.split('?')[0];
 const huella=(token:string)=>createHash('sha256').update(token).digest('hex');
