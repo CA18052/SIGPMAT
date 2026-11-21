@@ -655,7 +655,8 @@ export default function App() {
               </div>
             </section>
           ) : pagina === 'turnos' ? (
-            <Turnos token={token} departamentos={departamentos} esAdmin={esAdmin} onSesionExpirada={cerrarSesion} />
+            <Turnos token={token} departamentos={departamentos} esAdmin={esAdmin}
+              soloLectura={esVisitante} onSesionExpirada={cerrarSesion} />
           ) : (
             <div className="department-section">
               <div className="department-section-header">
