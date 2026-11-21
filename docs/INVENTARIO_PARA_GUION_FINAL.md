@@ -70,14 +70,25 @@
 
 ## Paquete 09 — AURA, asistente inteligente (integración de API)
 
-- **Código implementado:** interfaz lateral y botón flotante para conversar con AURA; OpenAI Responses API + Function Calling desde Fastify, nunca desde React.
+- **Código implementado:** interfaz lateral y botón flotante para conversar con AURA; Responses API compatible de Groq + Function Calling desde Fastify, nunca desde React.
 - **Consultas:** catálogos, reportes de cobertura, turnos, personal disponible por horario y recomendaciones de turnos. El modelo no tiene acceso SQL libre ni puede leer contraseñas, DUI o teléfonos.
 - **Operaciones supervisadas:** preparación de turno, empleado o asignación como una propuesta firmada y temporal; aprobación humana, contraseña, ticket de un solo uso y ejecución a través de rutas existentes.
 - **Diferencia conceptual:** IA generativa interpreta solicitudes y explica hallazgos; reglas PostgreSQL determinan elegibilidad; Fastify aplica roles, valida y ejecuta cambios.
 - **Limitación:** un plan de crear turno + asignar personas se ejecuta por pasos, no se da una autorización global a la IA.
 - **Demostración sugerida una vez configurada y probada:** preguntar disponibilidad de un médico para mañana; analizar cupos pendientes; preparar un turno, confirmar contraseña y verificar el evento de auditoría.
 - **Proveedor gratuito preferente:** GroqCloud Free + modelo `openai/gpt-oss-20b` (modelo abierto hospedado por Groq). Clave `GROQ_API_KEY` privada en Render; sin pago de OpenAI. Sin clave, no se simula IA. Las cuotas gratuitas están sujetas a los límites del proveedor. No hay fallback automático a API de pago.
-- **Estado de prueba:** código incluido; verificar CI y funcionamiento real del proveedor una vez configurado. Documento: `docs/PAQUETE_09_AURA_ASISTENTE_INTELIGENTE.md`.
+- **Estado de prueba:** conexión real de Groq, consultas, propuesta, creación de turno y asignación supervisada **comprobadas**; otras funciones y la regresión final pendientes. Documento: `docs/PAQUETE_09_AURA_ASISTENTE_INTELIGENTE.md`.
+
+## Evidencia de AURA verificada — 20 de noviembre de 2026 (El Salvador)
+
+- **Proveedor IA real conectado:** GroqCloud Free, modelo de pesos abiertos `openai/gpt-oss-20b`, mediante Responses API compatible y Function Calling. El usuario comprobó desde Safari consultas reales de departamentos, comprensión de fechas, consulta de elegibilidad y preparación de operaciones.
+- **Turno creado desde AURA:** `id_turno=28`, Cirugía General, martes 24/11/2026, 09:00–17:00 (hora de El Salvador), diurno, un cupo de médico especialista, requerimiento `id_requerimiento=28`, prioridad normal. Creación autorizada por usuario `admin.demo`, confirmada en PostgreSQL y en auditoría.
+- **Asignación real desde AURA:** `id_asignacion=37`, empleado `id_empleado=13`, `DEMO-CIR-01` (Paula Mariana Fuentes Hernández), requerimiento 28, estado `asignada`. Validación de Neon: **1 cupo requerido, 1 asignación activa = cobertura del 100 %**.
+- **Auditoría verificada:** `POST /api/aura/ejecutar` con HTTP 200 y `POST /api/turnos/28/asignaciones` con HTTP 201, ambos exitosos y asociados a `admin.demo`. Esta evidencia es de un entorno académico con datos ficticios.
+- **Incidencia y resolución:** dos solicitudes de asignación fallaron inicialmente con mensaje genérico `PROVEEDOR`; PR #15 incorporó diagnóstico de Groq y reintento delimitado. La siguiente solicitud preparó la propuesta y se ejecutó exitosamente.
+- **Limitaciones observadas:** el chat muestra Markdown sin formatear (tablas, negritas); la IA llegó a afirmar «ventana de disponibilidad» aunque la consulta garantiza únicamente ausencia de restricciones registradas. Corregir presentación y precisión del lenguaje en Paquete 10.
+- **Propuesta de demostración:** consultar disponibilidad de un profesional, preparar turno futuro, explicar el borrador, aprobar con contraseña, consultar candidatos, aprobar una asignación y verificar cobertura + auditoría. Para repetir en vivo, utilizar un **nuevo turno de ensayo**: el #28 ya está cubierto y no debe reutilizarse para otra asignación.
+- **Alcance verificado:** pruebas reales de consulta, propuesta, creación y asignación; no declarar automáticamente probadas las restantes rutas de AURA (p. ej., alta de empleados), la seguridad completa ante ataques o la exportación PDF.
 
 ## Plan de funciones próximas: NO IMPLEMENTADAS
 
