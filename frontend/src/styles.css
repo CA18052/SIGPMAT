@@ -628,3 +628,61 @@
 }
 @media(prefers-reduced-motion:reduce){.aura-typing i{animation:none}.aura-floating-button{transition:none}.aura-scroll{scroll-behavior:auto}}
 @media print{.aura-floating-button,.aura-overlay{display:none!important}}
+
+/* Paquete 10 — Mensajería AURA: lectura moderna, segura y verdaderamente móvil. */
+.aura-message-body>.aura-rich-text{
+  max-width:100%;min-width:0;background:#fff;
+  border:1px solid #eae1e6;border-radius:6px 15px 15px 15px;
+  box-shadow:0 3px 10px #3c223607;
+  padding:14px 15px;color:#42333f;
+  font-size:12px;line-height:1.7;overflow-wrap:anywhere
+}
+.aura-rich-text{display:grid;align-content:start;gap:11px;min-width:0}
+.aura-rich-text p,.aura-rich-text h3,.aura-rich-text ul,
+.aura-rich-text ol,.aura-rich-text blockquote,.aura-rich-text pre{margin:0}
+.aura-rich-text p{white-space:pre-line;line-height:1.75}
+.aura-rich-text h3{font-size:13px;line-height:1.45;color:#513149;letter-spacing:-.01em}
+.aura-rich-text strong{font-weight:750;color:#4e2d47}
+.aura-rich-text em{color:#695061}
+.aura-rich-text ul,.aura-rich-text ol{padding-left:20px;display:grid;gap:6px}
+.aura-rich-text li{padding-left:2px;line-height:1.6}
+.aura-rich-text li::marker{color:#a15a7d;font-weight:700}
+.aura-rich-text blockquote{
+  border-left:3px solid #b76d91;border-radius:0 8px 8px 0;
+  background:#f8f0f5;color:#634458;padding:10px 12px;line-height:1.65
+}
+.aura-rich-text pre{max-width:100%;overflow-x:auto;border-radius:10px;background:#35263a;color:#fff;white-space:pre;padding:12px;font-size:11px;line-height:1.55}
+.aura-rich-text code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.91em;
+  overflow-wrap:anywhere;background:#f2e9ef;border-radius:5px;padding:2px 4px;color:#663a58}
+.aura-rich-text pre code{background:transparent;color:inherit;padding:0;overflow-wrap:normal}
+.aura-rich-text hr{width:100%;border:0;border-top:1px solid #eee0e9}
+.aura-table-scroll{width:100%;max-width:100%;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;border-radius:11px;border:1px solid #eadde5}
+.aura-table-scroll:focus-visible{outline:3px solid #ac7193;outline-offset:2px}
+.aura-table-scroll table{border-collapse:collapse;width:100%;min-width:max-content;font-size:11px;line-height:1.5}
+.aura-table-scroll th,.aura-table-scroll td{
+  padding:10px 12px;border-right:1px solid #f1e6ed;border-bottom:1px solid #efe6eb;
+  vertical-align:top;text-align:left;white-space:normal;max-width:230px;min-width:85px
+}
+.aura-table-scroll th{background:#f8edf4;color:#623751;font-weight:800;font-size:10px}
+.aura-table-scroll tbody tr:nth-child(even){background:#fdf9fc}
+.aura-table-scroll td:last-child,.aura-table-scroll th:last-child{border-right:0}
+.aura-table-scroll tr:last-child td{border-bottom:0}
+.aura-intro.compact{padding:11px 20px;display:flex;flex-wrap:wrap;gap:5px 12px;align-items:center}
+.aura-intro.compact p{font-size:11px}
+.aura-intro.compact .aura-eyebrow{font-size:9px}
+.aura-message.from-aura .aura-message-body{width:100%}
+.aura-message-body>.aura-user-text{white-space:pre-wrap}
+.aura-proposal .aura-approve:focus-visible,
+.aura-compose>button:focus-visible,.aura-close:focus-visible,
+.aura-suggestions button:focus-visible{outline:3px solid #f2a5cb;outline-offset:3px}
+.aura-proposal[aria-busy="true"]{opacity:.78}
+.aura-proposal>strong{font-weight:750}
+.aura-proposal-top span:last-child{font-variant-numeric:tabular-nums}
+@media(max-width:760px){
+  .aura-intro.compact{padding:9px 15px;gap:4px 8px}
+  .aura-intro.compact p{font-size:10px}
+  .aura-message-body>.aura-rich-text{padding:13px 12px;font-size:12px}
+  .aura-table-scroll th,.aura-table-scroll td{padding:9px 10px;min-width:75px}
+  .aura-message.from-aura{max-width:100%}
+}
+@media print{.aura-rich-text{overflow:visible}}
