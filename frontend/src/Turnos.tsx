@@ -53,9 +53,10 @@ function formInicial(): Formulario {
 }
 
 export default function Turnos({
-  token, departamentos, onSesionExpirada, esAdmin
+  token, departamentos, onSesionExpirada, esAdmin, soloLectura=false
 }: {
-  token: string; departamentos: Departamento[]; onSesionExpirada: () => void; esAdmin: boolean;
+  token: string; departamentos: Departamento[];
+  onSesionExpirada: () => void; esAdmin: boolean; soloLectura?: boolean;
 }) {
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [cargos, setCargos] = useState<Cargo[]>([]);
@@ -279,15 +280,15 @@ export default function Turnos({
         <div className="shift-intro">
           <span className="eyebrow">PLANIFICACIÓN</span>
           <h2>Calendario de turnos</h2>
-          <p>Organiza los turnos, define los cupos y asigna personal por departamento.</p>
+          <p>{soloLectura ? 'Consulta la cobertura y el personal asignado a cada turno.' : 'Organiza turnos, define los cupos y asigna personal por departamento.'}</p>
         </div>
-        <button type="button" className="button primary" onClick={() => {
+        {!soloLectura && <button type="button" className="button primary" onClick={() => {
           if(mostrarFormulario){setMostrarFormulario(false);setEditandoTurnoId(null);setFormulario(formInicial());}
           else{setEditandoTurnoId(null);setFormulario(formInicial());setMostrarFormulario(true);}
           setError('');
         }}>
           {mostrarFormulario ? 'Cerrar formulario' : '+ Crear turno'}
-        </button>
+        </button>}
       </section>
 
       {mensaje && <div className="shift-success" role="status">✓ {mensaje}</div>}
@@ -304,7 +305,7 @@ export default function Turnos({
         <div><span>Cobertura de los turnos listados</span><strong>{ocupacion}%</strong></div>
       </div>
 
-      {mostrarFormulario && <section className="panel shift-form-panel">
+      {!soloLectura && mostrarFormulario && <section className="panel shift-form-panel">
         <div className="eyebrow">NUEVO TURNO</div>
         <h3>{editandoTurnoId ? 'Modificar turno #' + editandoTurnoId : 'Programar cobertura'}</h3>
         <form onSubmit={guardarTurno} className="shift-form">
@@ -457,9 +458,9 @@ export default function Turnos({
           {detalle.asignaciones.length===0 && <p className="muted">Sin asignaciones todavía.</p>}
           {detalle.asignaciones.map(a=><div className="person-line shift-person" key={a.id_asignacion}>
             <div><strong>{a.nombres} {a.apellidos}</strong><small>{a.codigo_empleado} · {a.estado}</small></div>
-            {detalle.turno.estado==='abierto' && <button disabled={procesando} type="button" className="text-button" onClick={()=>cancelarAsignacion(a.id_asignacion)}>Cancelar</button>}
+            {!soloLectura && detalle.turno.estado==='abierto' && <button disabled={procesando} type="button" className="text-button" onClick={()=>cancelarAsignacion(a.id_asignacion)}>Cancelar</button>}
           </div>)}
-          {detalle.turno.estado==='abierto' && r && <>
+          {!soloLectura && detalle.turno.estado==='abierto' && r && <>
             <div className="divider"/>
             <h3>Asignar personal</h3>
             <p className="muted shift-help">Se muestran empleados activos del departamento con el cargo solicitado. La base de datos comprobará cupos, solapamientos, acreditaciones y ausencias.</p>
