@@ -9,6 +9,7 @@ import CambiarContrasena from './CambiarContrasena';
 import RegistroPublico from './RegistroPublico';
 import ConfirmacionOperacion from './ConfirmacionOperacion';
 import Auditoria from './Auditoria';
+import Reportes from './Reportes';
 import {
   actualizarUsuarioDeSesion, borrarSesionDePestana, guardarPaginaEnPestana,
   guardarSesionEnPestana, recuperarPaginaDePestana, recuperarSesionDePestana
@@ -21,7 +22,7 @@ import type {
   SolicitudConfirmacion
 } from './api';
 
-type Pagina = 'resumen' | 'empleados' | 'departamentos' | 'turnos' | 'usuarios' | 'auditoria';
+type Pagina = 'resumen' | 'empleados' | 'departamentos' | 'turnos' | 'usuarios' | 'auditoria' | 'reportes';
 type Detalle = { empleado: EmpleadoDetalle; especialidades: Acreditacion[] };
 type ListaDepartamento = { departamento: Departamento; empleados: Empleado[] };
 
@@ -458,7 +459,8 @@ export default function App() {
   const etiquetas: Record<Pagina, string> = {
     resumen:'Panel principal',empleados:'Personal hospitalario',
     departamentos:'Departamentos',turnos:'Turnos y cobertura',
-    usuarios:'Administración de usuarios',auditoria:'Bitácora de cambios'
+    usuarios:'Administración de usuarios',auditoria:'Bitácora de cambios',
+    reportes:'Reportes y analítica'
   };
 
   return (
@@ -482,6 +484,7 @@ export default function App() {
               ['empleados', '▤', 'Personal médico'],
               ['departamentos', '▦', 'Departamentos'],
               ['turnos', '◷', 'Turnos y cobertura'],
+              ['reportes', '▥', 'Reportes y análisis'],
               ...(esSuperadmin ? [
                 ['usuarios', '♙', 'Usuarios'] as const,
                 ['auditoria', '☷', 'Bitácora'] as const
@@ -542,14 +545,16 @@ export default function App() {
         <div className="content">
           <div className="page-heading">
             <div><div className="eyebrow">ADMINISTRACIÓN OPERATIVA</div><h1>{etiquetas[pagina]}</h1>
-              <p>{pagina === 'resumen' ? 'Una vista clara de la información disponible para tu perfil.' : pagina === 'empleados' ? 'Consulta y administra la información del personal autorizado.' : pagina === 'turnos' ? 'Programa turnos y asigna personal según la cobertura necesaria.' : pagina === 'usuarios' ? 'Administra las cuentas individuales y sus credenciales de forma segura.' : pagina === 'auditoria' ? 'Consulta quién modificó qué registro y cuándo.' : 'Consulta las áreas hospitalarias disponibles según tu rol.'}</p></div>
+              <p>{pagina === 'resumen' ? 'Una vista clara de la información disponible para tu perfil.' : pagina === 'empleados' ? 'Consulta y administra la información del personal autorizado.' : pagina === 'turnos' ? 'Programa turnos y asigna personal según la cobertura necesaria.' : pagina === 'usuarios' ? 'Administra las cuentas individuales y sus credenciales de forma segura.' : pagina === 'auditoria' ? 'Consulta quién modificó qué registro y cuándo.' : pagina === 'reportes' ? 'Explora la cobertura real y los cupos pendientes por departamento.' : 'Consulta las áreas hospitalarias disponibles según tu rol.'}</p></div>
             <div className="date-pill">◷ <span>Información según tu perfil</span></div>
           </div>
 
           {error && <ErrorMessage text={error}
             motivo={errorDetalle?.motivo} solucion={errorDetalle?.solucion}/>}
           {!autorizado ? <div className="empty"><h2>Acceso limitado</h2><p>Este perfil no cuenta todavía con módulos de consulta habilitados. La API mantiene sus permisos de acceso.</p></div> :
-          pagina === 'auditoria' ? (
+          pagina === 'reportes' ? (
+            <Reportes token={token} onSesionExpirada={cerrarSesion}/>
+          ) : pagina === 'auditoria' ? (
             esSuperadmin ? <Auditoria token={token} onSesionExpirada={cerrarSesion}/>
               : <div className="empty"><h2>Acceso restringido</h2></div>
           ) : pagina === 'usuarios' ? (
