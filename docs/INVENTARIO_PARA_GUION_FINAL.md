@@ -76,7 +76,7 @@
 - **Diferencia conceptual:** IA generativa interpreta solicitudes y explica hallazgos; reglas PostgreSQL determinan elegibilidad; Fastify aplica roles, valida y ejecuta cambios.
 - **Limitación:** un plan de crear turno + asignar personas se ejecuta por pasos, no se da una autorización global a la IA.
 - **Demostración sugerida una vez configurada y probada:** preguntar disponibilidad de un médico para mañana; analizar cupos pendientes; preparar un turno, confirmar contraseña y verificar el evento de auditoría.
-- **Necesario para activarlo:** la clave privada `OPENAI_API_KEY` en Render y facturación de OpenAI Platform. Sin la clave no se presenta una simulación como si fuera IA real.
+- **Proveedor gratuito preferente:** GroqCloud Free + modelo `openai/gpt-oss-20b` (modelo abierto hospedado por Groq). Clave `GROQ_API_KEY` privada en Render; sin pago de OpenAI. Sin clave, no se simula IA. Las cuotas gratuitas están sujetas a los límites del proveedor. No hay fallback automático a API de pago.
 - **Estado de prueba:** código incluido; verificar CI y funcionamiento real del proveedor una vez configurado. Documento: `docs/PAQUETE_09_AURA_ASISTENTE_INTELIGENTE.md`.
 
 ## Plan de funciones próximas: NO IMPLEMENTADAS
