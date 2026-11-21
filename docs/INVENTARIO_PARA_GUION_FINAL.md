@@ -57,10 +57,20 @@
 - **Demostración sugerida:** registrar un carnet ficticio autorizado para la demo, entrar como visitante y mostrar consultas sin edición; luego entrar como administrador, editar un registro temporal con confirmación, y mostrar el evento en la bitácora desde superadmin.
 - **Pruebas E2E de reautenticación, registro y permisos:** requieren sesión real después de publicación. No afirmar que se completaron antes de documentarlas.
 
+## Paquete 08 — Reportes y planificación asistida
+
+- **Reportes operativos:** módulo «Reportes y análisis», intervalo de fechas, indicadores reales por departamento, gráficos de cobertura, cupos pendientes y porcentajes calculados en PostgreSQL.
+- **Exportación:** CSV UTF-8 seguro y opción «Imprimir / Guardar PDF» desde el navegador, con diseño A4.
+- **Reglas de acceso:** visitantes leen solo información agregada; jefes únicamente la cobertura de su departamento.
+- **Propuestas de personal:** «Proponer personal» en el detalle de turnos futuros; hasta cinco candidatos por requerimiento, con cargo y especialidad compatibles, adscripción vigente, sin conflictos de horario/ausencias y orden de menor carga reciente.
+- **Confirmación:** el usuario autoriza manualmente cada asignación y verifica su contraseña; el trigger de PostgreSQL revalida todas las reglas al guardar.
+- **Precisión conceptual:** el recomendador es determinista; **no se presenta como aprendizaje automático** ni como AURA. La IA generativa real es el Paquete 09.
+- **Demostración sugerida:** abrir reportes, revisar cupos pendientes, cambiar fechas, exportar; luego abrir un turno futuro con vacantes, solicitar candidatos y explicar su elegibilidad. Asignar en un registro temporal si está autorizado.
+- **Estado de verificación:** consultas SQL reales verificadas en Neon, incluidas restricciones del jefe y candidatos de Urgencias; pruebas completas de navegador y exportación siguen pendientes.
+
 ## Plan de funciones próximas: NO IMPLEMENTADAS
 
 - **Paquete 07 — Render:** por decisión del propietario, los despliegues quedan bajo control **manual**; no se requiere automatizar su publicación.
-- **Paquete 08:** reportes avanzados y propuestas automáticas de cobertura.
 - **Paquete 09:** AURA, asistente de inteligencia artificial con información y permisos controlados por Fastify.
 
 **Regla de exactitud del guion final:** separar el recorrido de funciones comprobadas de las propuestas, registrar la versión Live de Render y no inventar cuentas, pantallas, respuestas de IA, métricas ni resultados de pruebas.
