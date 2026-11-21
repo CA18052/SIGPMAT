@@ -68,9 +68,20 @@
 - **Demostración sugerida:** abrir reportes, revisar cupos pendientes, cambiar fechas, exportar; luego abrir un turno futuro con vacantes, solicitar candidatos y explicar su elegibilidad. Asignar en un registro temporal si está autorizado.
 - **Estado de verificación:** consultas SQL reales verificadas en Neon, incluidas restricciones del jefe y candidatos de Urgencias; pruebas completas de navegador y exportación siguen pendientes.
 
+## Paquete 09 — AURA, asistente inteligente (integración de API)
+
+- **Código implementado:** interfaz lateral y botón flotante para conversar con AURA; OpenAI Responses API + Function Calling desde Fastify, nunca desde React.
+- **Consultas:** catálogos, reportes de cobertura, turnos, personal disponible por horario y recomendaciones de turnos. El modelo no tiene acceso SQL libre ni puede leer contraseñas, DUI o teléfonos.
+- **Operaciones supervisadas:** preparación de turno, empleado o asignación como una propuesta firmada y temporal; aprobación humana, contraseña, ticket de un solo uso y ejecución a través de rutas existentes.
+- **Diferencia conceptual:** IA generativa interpreta solicitudes y explica hallazgos; reglas PostgreSQL determinan elegibilidad; Fastify aplica roles, valida y ejecuta cambios.
+- **Limitación:** un plan de crear turno + asignar personas se ejecuta por pasos, no se da una autorización global a la IA.
+- **Demostración sugerida una vez configurada y probada:** preguntar disponibilidad de un médico para mañana; analizar cupos pendientes; preparar un turno, confirmar contraseña y verificar el evento de auditoría.
+- **Necesario para activarlo:** la clave privada `OPENAI_API_KEY` en Render y facturación de OpenAI Platform. Sin la clave no se presenta una simulación como si fuera IA real.
+- **Estado de prueba:** código incluido; verificar CI y funcionamiento real del proveedor una vez configurado. Documento: `docs/PAQUETE_09_AURA_ASISTENTE_INTELIGENTE.md`.
+
 ## Plan de funciones próximas: NO IMPLEMENTADAS
 
-- **Paquete 07 — Render:** por decisión del propietario, los despliegues quedan bajo control **manual**; no se requiere automatizar su publicación.
-- **Paquete 09:** AURA, asistente de inteligencia artificial con información y permisos controlados por Fastify.
+- **Render:** despliegues automáticos desde GitHub comprobados; conservar configuración `After CI Checks Pass` mientras el propietario así lo desee.
+- **Paquete 10:** pulido visual, accesibilidad, pruebas de regresión y cierre de la defensa.
 
 **Regla de exactitud del guion final:** separar el recorrido de funciones comprobadas de las propuestas, registrar la versión Live de Render y no inventar cuentas, pantallas, respuestas de IA, métricas ni resultados de pruebas.

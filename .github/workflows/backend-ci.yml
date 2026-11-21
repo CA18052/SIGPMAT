@@ -25,3 +25,5 @@ jobs:
         run: npm run typecheck
       - name: Compilar API
         run: npm run build
+      - name: Pruebas de tickets firmados AURA
+        run: npm run test:aura
