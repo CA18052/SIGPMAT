@@ -16,6 +16,14 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
+      # GroqCloud Free es la opción predeterminada de AURA.
+      - key: GROQ_API_KEY
+        sync: false
+      - key: AURA_PROVEEDOR
+        value: groq
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-20b
+      # OpenAI es opcional y nunca se usa sin AURA_PROVEEDOR=openai.
       - key: OPENAI_API_KEY
         sync: false
       - key: OPENAI_MODEL
