@@ -46,8 +46,11 @@ export default function AURA({
   const [ejecutando,setEjecutando]=useState(false);
   const [error,setError]=useState('');
   const [reloj,setReloj]=useState(Date.now);
+  const [revision,setRevision]=useState<{id:number;propuesta:Propuesta}|null>(null);
   const finRef=useRef<HTMLDivElement|null>(null);
   const textareaRef=useRef<HTMLTextAreaElement|null>(null);
+  const revisionRef=useRef<HTMLElement|null>(null);
+  const aceptarRef=useRef<HTMLButtonElement|null>(null);
   const idRef=useRef(1);
 
   useEffect(()=>{
@@ -67,11 +70,28 @@ export default function AURA({
     [abierto,mensajes,enviando]);
   useEffect(()=>{
     if(!abierto)return;
-    const escucha=(e:KeyboardEvent)=>{if(e.key==='Escape'&&!ejecutando)onCerrar();};
+    const escucha=(e:KeyboardEvent)=>{
+      if(e.key==='Escape'){
+        if(revision){e.preventDefault();setRevision(null);}
+        else if(!ejecutando)onCerrar();
+      }
+      if(e.key==='Tab'&&revision){
+        const controles=revisionRef.current?.querySelectorAll<HTMLButtonElement>(
+          'button:not([disabled])');
+        if(!controles?.length)return;
+        const primero=controles[0],ultimo=controles[controles.length-1];
+        if(e.shiftKey&&document.activeElement===primero){
+          e.preventDefault();ultimo.focus();
+        }else if(!e.shiftKey&&document.activeElement===ultimo){
+          e.preventDefault();primero.focus();
+        }
+      }
+    };
     window.addEventListener('keydown',escucha);
     return()=>window.removeEventListener('keydown',escucha);
-  },[abierto,ejecutando,onCerrar]);
+  },[abierto,ejecutando,onCerrar,revision]);
   useEffect(()=>{if(abierto)textareaRef.current?.focus();},[abierto]);
+  useEffect(()=>{if(revision)aceptarRef.current?.focus();},[revision]);
   // Tiempo real de vencimiento: no ofrecer operaciones con tickets caducados.
   useEffect(()=>{
     if(!abierto||!mensajes.some(m=>m.propuesta&&!m.completada))return;
@@ -106,11 +126,11 @@ export default function AURA({
     const mensaje=mensajes.find(m=>m.id===id);
     if(!mensaje||mensaje.completada||!mensaje.propuestaVenceEn||
       Date.now()>=mensaje.propuestaVenceEn){
+      setRevision(null);
       setError('La propuesta venció. Pídele a AURA que prepare una nueva antes de continuar.');
       return;
     }
-    if(!window.confirm('¿Apruebas esta operación de SIGPMAT?\n\n'+propuesta.resumen+
-      '\n\nSe verificará tu contraseña antes de guardar.'))return;
+    setRevision(null);
     setError('');setEjecutando(true);
     try{
       const respuesta=await requestApi<Ejecucion>('/api/aura/ejecutar',token,{
@@ -128,7 +148,7 @@ export default function AURA({
 
   if(!abierto)return null;
   return <div className="aura-overlay" role="presentation" onMouseDown={e=>{
-    if(e.currentTarget===e.target&&!ejecutando)onCerrar();
+    if(e.currentTarget===e.target&&!ejecutando&&!revision)onCerrar();
   }}>
     <section className="aura-window" role="dialog" aria-modal="true" aria-labelledby="aura-titulo">
       <header className="aura-header">
@@ -187,7 +207,10 @@ export default function AURA({
               <button type="button" className="aura-approve"
                 disabled={m.completada||ejecutando||enviando||soloLectura||
                   (m.propuestaVenceEn!==undefined&&reloj>=m.propuestaVenceEn)}
-                onClick={()=>void ejecutar(m.id,m.propuesta!)}>
+                onClick={()=>{
+                   setReloj(Date.now());
+                   setRevision({id:m.id,propuesta:m.propuesta!});
+                 }}>
                 {m.completada?'✓ Operación ejecutada':
                   m.propuestaVenceEn!==undefined&&reloj>=m.propuestaVenceEn
                     ? 'Propuesta caducada'
@@ -233,6 +256,31 @@ export default function AURA({
         AURA puede equivocarse. No compartas DUI, teléfonos ni contraseñas.
         Las acciones requieren autorización.
       </footer>
+      {revision&&<div className="aura-review-layer" role="presentation">
+        <section ref={revisionRef} className="aura-review-dialog" role="alertdialog"
+          aria-modal="true" aria-labelledby="aura-review-titulo"
+          aria-describedby="aura-review-detalle">
+          <div className="aura-review-icon" aria-hidden="true">✓</div>
+          <span className="aura-eyebrow">VERIFICACIÓN DE CAMBIO</span>
+          <h2 id="aura-review-titulo">Revisa antes de confirmar</h2>
+          <p id="aura-review-detalle">{revision.propuesta.resumen}</p>
+          <div className="aura-review-security">
+            <strong>Acción supervisada</strong>
+            <span>No se ha guardado ningún cambio. SIGPMAT comprobará
+              tus permisos y solicitará tu contraseña actual.</span>
+          </div>
+          <div className="aura-review-actions">
+            <button type="button" className="aura-review-cancel"
+              onClick={()=>setRevision(null)}>Cancelar</button>
+            <button ref={aceptarRef} type="button" className="aura-approve"
+              disabled={mensajes.some(m=>m.id===revision.id &&
+                m.propuestaVenceEn!==undefined&&reloj>=m.propuestaVenceEn)}
+              onClick={()=>void ejecutar(revision.id,revision.propuesta)}>
+              Aprobar y verificar contraseña
+            </button>
+          </div>
+        </section>
+      </div>}
     </section>
   </div>;
 }
